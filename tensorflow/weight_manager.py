@@ -123,7 +123,7 @@ def zeros_like_parameters(
     return parameters
 
 
-def state_dict(model) -> OrderedDict[str, tf.Variable]:
+def model_state_dict(model) -> OrderedDict[str, tf.Variable]:
     """analogous to torch method"""
     s_dict = OrderedDict({})
     for layer in model.layers:
