@@ -3,6 +3,8 @@ from typing import List
 
 import tensorflow as tf
 
+from collections import OrderedDict
+
 # we ignore batch normalization
 # we ignore device handling
 
@@ -119,3 +121,15 @@ def zeros_like_parameters(
         parameters.append(tf.zeros_like(input=layer_weights))
     
     return parameters
+
+
+def state_dict(model) -> OrderedDict[str, tf.Variable]:
+    """analogous to torch method"""
+    s_dict = OrderedDict({})
+    for layer in model.layers:
+        layer_weights, layer_bias = layer.get_weights()
+        layer_weights, layer_bias = tf.Variable(layer_weights,dtype='float64'), tf.Variable(layer_bias,dtype='float64')
+        s_dict[f'{layer.name}.weight'] = layer_weights
+        s_dict[f'{layer.name}.bias'] = layer_bias
+
+    return s_dict     
