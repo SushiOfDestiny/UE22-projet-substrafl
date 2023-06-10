@@ -19,6 +19,7 @@ from substrafl.exceptions import OptimizerValueError
 from substrafl.index_generator import BaseIndexGenerator
 from substrafl.remote.decorators import remote_data
 
+from tf_data_loader import tf_dataloader
 import weight_manager
 
 logger = logging.getLogger(__name__)
@@ -116,6 +117,52 @@ class TFAlgo(Algo):
             np.save(predictions_path, predictions)
             # Create a folder ??
             shutil.move(str(predictions_path) + ".npy", predictions_path)
+    
+    def _local_predict(self, predict_dataset: tf.data.Dataset, predictions_path):
+        """Execute the following operations:
+
+            * Create the torch dataloader using the index generator batch size.
+            * Set the model to `eval` mode
+            * Save the predictions using the
+              :py:func:`~substrafl.algorithms.tensorflow.tf_base_algo.TFAlgo._save_predictions` function.
+
+        Args:
+            predict_dataset (tf.data.Dataset): predict_dataset build from the x returned by the opener.
+
+        Important:
+            The onus is on the user to ``save`` the compute predictions. Substrafl provides the
+            :py:func:`~substrafl.algorithms.tensorflow.tf_base_algo.TFAlgo._save_predictions` to do so.
+            The user can load those predictions from a metric file with the command:
+            ``y_pred = np.load(inputs['predictions'])``.
+
+        Raises:
+            BatchSizeNotFoundError: No default batch size have been found to perform local prediction.
+                Please overwrite the predict function of your algorithm.
+        """
+        if self._index_generator is not None:
+            predict_loader = tf_dataloader(predict_dataset, batch_size=self._index_generator.batch_size)
+        else:
+            raise BatchSizeNotFoundError(
+                "No default batch size has been found to perform local prediction. "
+                "Please overwrite the _local_predict function of your algorithm."
+            )
+
+        # Equivalent of self._model.eval() : desactivate the variables not used for prediction
+        tf.keras.backend.set_learning_phase(0)
+        # Variable controlling the inference mode
+        inference_mode = tf.Variable(True, trainable=False)
+
+        predictions = tf.constant([])
+        if inference_mode:
+            # Code specific to the inference mode
+            with tf.device(self._device):
+                for x in predict_loader:
+                    predictions = tf.concat([predictions, self._model(x)], 0)
+
+        with tf.device('GPU:0'):
+            # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
+            predictions = tf.identity(predictions)
+            self._save_predictions(predictions, predictions_path)
 
     def _get_state_to_save(self) -> dict:
         """Create the algo checkpoint: a dictionary
