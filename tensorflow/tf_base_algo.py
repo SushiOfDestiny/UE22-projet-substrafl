@@ -105,6 +105,18 @@ class TFAlgo(Algo):
         predict_dataset = self._dataset(datasamples)
         self._local_predict(predict_dataset=predict_dataset, predictions_path=predictions_path)
     
+    def _save_predictions(self, predictions: tf.Tensor, predictions_path: os.PathLike):
+        """Save the predictions under the numpy format.
+
+        Args:
+            predictions (tf.Tensor): predictions to save.
+            predictions_path (os.PathLike): destination file to save predictions.
+        """
+        if predictions_path is not None:
+            np.save(predictions_path, predictions)
+            # Create a folder ??
+            shutil.move(str(predictions_path) + ".npy", predictions_path)
+
     def _get_state_to_save(self) -> dict:
         """Create the algo checkpoint: a dictionary
         saved with tf ???.
