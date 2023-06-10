@@ -22,6 +22,7 @@ from substrafl.remote.decorators import remote_data
 from tf_data_loader import tf_dataloader
 import weight_manager
 
+
 logger = logging.getLogger(__name__)
 
 class TFAlgo(Algo):
@@ -103,7 +104,7 @@ class TFAlgo(Algo):
         """
 
         # Create tf dataset
-        predict_dataset = self._dataset(datasamples)
+        predict_dataset = self._dataset(datasamples, is_inference=True)
         self._local_predict(predict_dataset=predict_dataset, predictions_path=predictions_path)
     
     def _save_predictions(self, predictions: tf.Tensor, predictions_path: os.PathLike):
