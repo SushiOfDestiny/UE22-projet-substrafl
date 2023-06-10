@@ -88,6 +88,23 @@ class TFAlgo(Algo):
         # Must be implemented in the child class
         raise NotImplementedError()
     
+    @remote_data
+    def predict(self, datasamples: Any, shared_state: Any = None, predictions_path: os.PathLike = None) -> Any:
+        """Execute the following operations:
+
+            * Create the test torch dataset.
+            * Execute and return the results of the ``self._local_predict`` method
+
+        Args:
+            datasamples (typing.Any): Input data
+            shared_state (typing.Any): Latest train task shared state (output of the train method)
+            predictions_path (os.PathLike): Destination file to save predictions
+        """
+
+        # Create tf dataset
+        predict_dataset = self._dataset(datasamples)
+        self._local_predict(predict_dataset=predict_dataset, predictions_path=predictions_path)
+    
     def _get_state_to_save(self) -> dict:
         """Create the algo checkpoint: a dictionary
         saved with tf ???.
