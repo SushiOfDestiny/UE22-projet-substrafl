@@ -160,7 +160,7 @@ class TFAlgo(Algo):
                 for x in predict_loader:
                     predictions = tf.concat([predictions, self._model(x)], 0)
 
-        with tf.device('GPU:0'):
+        with tf.device('CPU:0'):
             # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
             predictions = tf.identity(predictions)
             self._save_predictions(predictions, predictions_path)
