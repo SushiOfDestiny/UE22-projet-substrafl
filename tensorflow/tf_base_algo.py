@@ -51,26 +51,26 @@ class TFAlgo(Algo):
 
         self._device = self._get_tf_device(use_gpu=use_gpu)
 
-        self._model = model.to(self._device)
-        self._optimizer = optimizer
-        # Move the optimizer to GPU if needed
-        #https://www.tensorflow.org/guide/gpu
-        if self._optimizer is not None:
-            gpus = tf.config.list_physical_devices('GPU')
-            if gpus:
-                # Restrict TensorFlow to only use the first GPU
-                try:
-                    tf.config.set_visible_devices(gpus, 'GPU')
-                    logical_gpus = tf.config.list_logical_devices('GPU')
-                except RuntimeError as e:
-                    # Visible devices must be set before GPUs have been initialized
-                    print(e)
-        self._criterion = criterion
-        self._scheduler = scheduler
+        with tf.device(self._device):
+            self._optimizer = optimizer
+            # Move the optimizer to GPU if needed
+            #https://www.tensorflow.org/guide/gpu
+            if self._optimizer is not None:
+                gpus = tf.config.list_physical_devices('GPU')
+                if gpus:
+                    # Restrict TensorFlow to only use the first GPU
+                    try:
+                        tf.config.set_visible_devices(gpus, 'GPU')
+                        logical_gpus = tf.config.list_logical_devices('GPU')
+                    except RuntimeError as e:
+                        # Visible devices must be set before GPUs have been initialized
+                        print(e)
+            self._criterion = criterion
+            self._scheduler = scheduler
 
-        self._index_generator = index_generator
-        self._dataset: tf.data.Dataset = dataset
-        # dataset check overlooked
+            self._index_generator = index_generator
+            self._dataset: tf.data.Dataset = dataset
+            # dataset check overlooked
 
     @property
     def model(self) -> tf.keras.Sequential:
