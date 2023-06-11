@@ -123,13 +123,33 @@ def zeros_like_parameters(
     return parameters
 
 
-def model_state_dict(model) -> OrderedDict[str, tf.Variable]:
-    """analogous to torch method"""
+# def model_state_dict(model) -> OrderedDict[str, tf.Variable]:
+#     """analogous to torch method"""
+#     s_dict = OrderedDict({})
+#     for layer in model.layers:
+#         layer_weights, layer_bias = layer.get_weights()
+#         layer_weights, layer_bias = tf.Variable(layer_weights,dtype='float64'), tf.Variable(layer_bias,dtype='float64')
+#         s_dict[f'{layer.name}.weight'] = layer_weights
+#         s_dict[f'{layer.name}.bias'] = layer_bias
+
+#     return s_dict     
+
+# def model_load_state_dict(model, s_dict):
+#     """load the dict infos into model"""
+#     for layer in model.layers:
+#         layer.set_weights(
+#             (s_dict[f'{layer.name}.weight'], s_dict[f'{layer.name}.bias'])
+#         )
+
+def model_state_dict(model) -> OrderedDict:
+    """Create a dict with the configuration (structure) and the parameters (weights and bias) of the model"""
     s_dict = OrderedDict({})
-    for layer in model.layers:
-        layer_weights, layer_bias = layer.get_weights()
-        layer_weights, layer_bias = tf.Variable(layer_weights,dtype='float64'), tf.Variable(layer_bias,dtype='float64')
-        s_dict[f'{layer.name}.weight'] = layer_weights
-        s_dict[f'{layer.name}.bias'] = layer_bias
+    s_dict['config'] = model.get_config()
+    s_dict['weights'] = model.get_weights()
 
     return s_dict     
+
+def model_load_state_dict(model, s_dict):
+    """load the state dict into model"""
+    model.from_config(s_dict['config'])
+    model.set_weights(s_dict['weights'])

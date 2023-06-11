@@ -22,6 +22,8 @@ from substrafl.remote.decorators import remote_data
 from tf_data_loader import tf_dataloader
 import weight_manager
 
+import pickle
+
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +167,66 @@ class TFAlgo(Algo):
             predictions = tf.identity(predictions)
             self._save_predictions(predictions, predictions_path)
 
+    def _update_from_checkpoint(self, path: Path) -> dict:
+        """Load the checkpoint and update the internal state
+        from it.
+        Pop the values from the checkpoint so that we can ensure that it is empty at the
+        end, i.e. all the values have been used.
+
+        Args:
+            path (pathlib.Path): path where the checkpoint is saved
+
+        Returns:
+            dict: checkpoint
+
+        Example:
+
+            .. code-block:: python
+
+                def _update_from_checkpoint(self, path: Path) -> dict:
+                    checkpoint = super()._update_from_checkpoint(path=path)
+                    self._strategy_specific_variable = checkpoint.pop("strategy_specific_variable")
+                    return checkpoint
+        """
+        assert path.is_file(), f'Cannot load the model - does not exist {list(path.parent.glob("*"))}'
+        
+        # we ignore the map_location arg
+        with open(path, "rb") as f:
+            checkpoint = pickle.load(path)
+        
+        weight_manager.model_load_state_dict(self._model, checkpoint.pop("model_state_dict"))
+
+        if self._optimizer is not None:
+            self._optimizer.from_config(checkpoint.pop("optimizer_state_dict"))
+
+        if self._scheduler is not None:
+            self._scheduler.from_config(checkpoint.pop("scheduler_state_dict"))
+
+
+        self._index_generator = checkpoint.pop("index_generator")
+
+        # following Torch code has not been implemented
+        # if self._device == tf.device("cpu"):
+        #     torch.set_rng_state(checkpoint.pop("rng_state").to(self._device))
+        # else:
+        #     torch.cuda.set_rng_state(checkpoint.pop("rng_state").to("cpu"))
+
+        return checkpoint
+    
+    def load(self, path: Path) -> "TFAlgo":
+        """Load the stateful arguments of this class.
+        Child classes do not need to override that function.
+
+        Args:
+            path (pathlib.Path): The path where the class has been saved.
+
+        Returns:
+            TorchAlgo: The class with the loaded elements.
+        """
+        checkpoint = self._update_from_checkpoint(path=path)
+        assert len(checkpoint) == 0, f"Not all values from the checkpoint have been used: {checkpoint.keys()}"
+        return self
+    
     def _get_state_to_save(self) -> dict:
         """Create the algo checkpoint: a dictionary
         saved with tf ???.
@@ -190,12 +252,86 @@ class TFAlgo(Algo):
             "index_generator": self._index_generator,
         }
         if self._optimizer is not None:
-            checkpoint["optimizer_state_dict"] = self._optimizer.state_dict()
-
-
-        if self._device == torch.device("cpu"):
-            checkpoint["rng_state"] = torch.get_rng_state()
-        else:
-            checkpoint["rng_state"] = torch.cuda.get_rng_state()
+            # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
+            checkpoint["optimizer_state_dict"] = self._optimizer.get_config()
+        if self._scheduler is not None:
+            # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
+            checkpoint["scheduler_state_dict"] = self._scheduler.get_config()
 
         return checkpoint
+    
+    def _check_tf_dataset(self):
+        # Check that the given Dataset is not an instance
+        try:
+            issubclass(self._dataset, tf.data.Dataset)
+        except TypeError:
+            raise DatasetTypeError(
+                "``dataset`` should be non-instantiate tf.data.Dataset class. "
+                "This means that calling ``dataset(datasamples, is_inference=False)`` must "
+                "returns a tf dataset object. "
+                "You might have provided an instantiate dataset or an object of the wrong type."
+            )
+
+        # Check the signature of the __init__() function of the tf dataset class
+        signature = inspect.signature(self._dataset.__init__)
+        init_parameters = signature.parameters
+
+        if "datasamples" not in init_parameters:
+            raise DatasetSignatureError(
+                "The __init__() function of the tf Dataset must contain datasamples as parameter."
+            )
+        elif "is_inference" not in init_parameters:
+            raise DatasetSignatureError(
+                "The __init__() function of the tf Dataset must contain is_inference as parameter."
+            )
+        
+    def save(self, path: Path):
+        """Saves all the stateful elements of the class to the specified path.
+        Child classes do not need to override that function.
+
+        Args:
+            path (pathlib.Path): A path where to save the class.
+        """
+        
+        # tf functions to save and load objecrs are quite different than torch's, we firstly try to imitate the latter 
+        # with the pickle module
+        with open(path, "wb") as f:
+            pickle.dump(self._get_state_to_save(), f)
+
+        assert path.is_file(), f'Did not save the model properly {list(path.parent.glob("*"))}'
+    
+    def summary(self):
+        """Summary of the class to be exposed in the experiment summary file.
+        Implement this function in the child class to add strategy-specific variables. The variables
+        must be json-serializable.
+
+        Example:
+
+            .. code-block:: python
+
+                def summary(self):
+                    summary = super().summary()
+                    summary.update(
+                        "strategy_specific_variable": self._strategy_specific_variable,
+                    )
+                    return summary
+
+        Returns:
+            dict: a json-serializable dict with the attributes the user wants to store
+        """
+        summary = super().summary()
+        summary.update(
+            {
+                "model": str(type(self._model)),
+                "criterion": str(type(self._criterion)),
+                "optimizer": None
+                if self._optimizer is None
+                else {
+                    "type": str(type(self._optimizer)),
+                    "parameters": self._optimizer.defaults,
+                },
+                "scheduler": None if self._scheduler is None else str(type(self._scheduler)),
+            }
+        )
+        return summary
+
