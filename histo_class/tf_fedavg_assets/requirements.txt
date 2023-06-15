@@ -1,0 +1,2 @@
+substra==0.42.0
+substrafl==0.34.0
