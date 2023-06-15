@@ -1,3 +1,4 @@
+tensorflow/__pycache__/weight_manager.cpython-39.pyc
 histo_class/local-worker/4g_0jhgy/92c9053f-8d1c-4308-bba0-78abe7045e26/description.md
 histo_class/local-worker/4g_0jhgy/92c9053f-8d1c-4308-bba0-78abe7045e26/histo_opener.py
 histo_class/local-worker/85akzcvz/23bb1d17-67c4-4300-bdb0-2ab86d5bc617/algo.tar.gz
@@ -34,7 +35,6 @@ histo_class/local-worker/vivay9ja/9be91e57-9621-4d9d-a6d4-0d6de0422a18/descripti
 histo_class/local-worker/vivay9ja/9be91e57-9621-4d9d-a6d4-0d6de0422a18/histo_opener.py
 histo_class/local-worker/w8bspnhm/0cccffc4-b6dd-4f60-bc1c-d9a2dc6817b3/algo.tar.gz
 histo_class/local-worker/w8bspnhm/0cccffc4-b6dd-4f60-bc1c-d9a2dc6817b3/description.md
-histo_class/tf_fedavg_assets/dataset/__pycache__/histo_dataset.cpython-39.pyc
 histo_class/tmp/data_histo/org_1/test/test_images.npy
 histo_class/tmp/data_histo/org_1/test/test_labels.npy
 histo_class/tmp/data_histo/org_1/train/train_images.npy
@@ -43,4 +43,3 @@ histo_class/tmp/data_histo/org_2/test/test_images.npy
 histo_class/tmp/data_histo/org_2/test/test_labels.npy
 histo_class/tmp/data_histo/org_2/train/train_images.npy
 histo_class/tmp/data_histo/org_2/train/train_labels.npy
-histo_class/tf_fedavg_assets/dataset/__pycache__/histo_dataset.cpython-39.pyc
