@@ -1,4 +1,9 @@
-tensorflow/__pycache__/weight_manager.cpython-39.pyc
+histo_class/tmp
+histo_class/local-worker
+histo_class/tf_fedavg_assets/dataset/__pycache__
+tensorflow/__pycache__/
+run_histo_tf_failed_merge.ipynb
+
 histo_class/local-worker/4g_0jhgy/92c9053f-8d1c-4308-bba0-78abe7045e26/description.md
 histo_class/local-worker/4g_0jhgy/92c9053f-8d1c-4308-bba0-78abe7045e26/histo_opener.py
 histo_class/local-worker/85akzcvz/23bb1d17-67c4-4300-bdb0-2ab86d5bc617/algo.tar.gz
@@ -43,3 +48,4 @@ histo_class/tmp/data_histo/org_2/test/test_images.npy
 histo_class/tmp/data_histo/org_2/test/test_labels.npy
 histo_class/tmp/data_histo/org_2/train/train_images.npy
 histo_class/tmp/data_histo/org_2/train/train_labels.npy
+
