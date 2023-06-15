@@ -143,7 +143,8 @@ class TFAlgo(Algo):
                 Please overwrite the predict function of your algorithm.
         """
         if self._index_generator is not None:
-            predict_loader = tf_dataloader(predict_dataset, batch_size=self._index_generator.batch_size)
+            # predict_loader = tf_dataloader(predict_dataset, batch_size=self._index_generator.batch_size)
+            predict_loader = predict_dataset
         else:
             raise BatchSizeNotFoundError(
                 "No default batch size has been found to perform local prediction. "
