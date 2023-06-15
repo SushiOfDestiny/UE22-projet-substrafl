@@ -127,7 +127,7 @@ class TFFedAvgAlgo(TFAlgo):
             weights and previous weights)
         """
 
-        # Create torch dataset
+        # Create tf dataset
         train_dataset = self._dataset(datasamples, is_inference=False)
 
         if shared_state is None:

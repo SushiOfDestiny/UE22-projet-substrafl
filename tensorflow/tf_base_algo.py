@@ -167,6 +167,59 @@ class TFAlgo(Algo):
             predictions = tf.identity(predictions)
             self._save_predictions(predictions, predictions_path)
 
+    def _local_train(
+            self,
+            train_dataset: tf.data.Dataset,
+        ):
+            """Local train method. Contains the local training loop.
+
+            Train the model on ``num_updates`` minibatches, using the ``self._index_generator generator`` as batch sampler
+            for the tf dataset.
+
+            Args:
+                train_dataset (TFDataset / tf.data.Dataset): train_dataset build from the x and y returned by the opener.
+
+            Important:
+
+                You must use ``next(self._index_generator)`` as batch sampler,
+                to ensure that the batches you are using are correct between 2 rounds
+                of the federated learning strategy.
+            """
+            if self._optimizer is None:
+                raise OptimizerValueError(
+                    "No optimizer found. Either give one or overwrite the _local_train method from the used torch"
+                    "algorithm."
+                )
+
+            # Create tf dataloader
+            # train_data_loader = tf_dataloader(train_dataset, batch_sampler=self._index_generator) # reminder: class(train_dataset) = TFDataset / tf.data.Dataset
+            # avoiding the loader probleme
+            train_data_loader = train_dataset
+
+            # Changing device
+            with tf.device(self._device):
+                for x_batch, y_batch in train_data_loader:
+                    
+                    # x_batch = x_batch.to(self._device)
+                    # y_batch = y_batch.to(self._device)
+
+                    # cf https://www.tensorflow.org/overview?hl=fr "For experts"
+                    # Forward pass
+                    y_pred = self._model(x_batch, training=True)
+
+                    # Compute loss
+                    loss = self._criterion(y_batch, y_pred)
+
+                    # Calculate gradients
+                    grads = tf.GradientTape.gradient(loss, self._model.trainable_variables)
+
+                    # Apply gradients
+                    self._optimizer.apply_gradients(zip(grads, self._model.trainable_variables))
+
+                    if self._scheduler is not None:
+                        self._scheduler.step()
+
+
     def _update_from_checkpoint(self, path: Path) -> dict:
         """Load the checkpoint and update the internal state
         from it.
