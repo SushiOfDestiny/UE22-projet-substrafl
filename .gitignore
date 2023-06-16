@@ -1,7 +1,7 @@
 histo_class/tmp
 histo_class/local-worker
 histo_class/tf_fedavg_assets/dataset/__pycache__
-tensorflow/__pycache__/
+tensorflow_algorithms/__pycache__
 run_histo_tf_failed_merge.ipynb
 
 histo_class/local-worker/4g_0jhgy/92c9053f-8d1c-4308-bba0-78abe7045e26/description.md

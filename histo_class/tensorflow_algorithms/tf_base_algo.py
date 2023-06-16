@@ -51,7 +51,7 @@ class TFAlgo(Algo):
         if seed is not None:
             tf.random.set_seed(seed)
 
-        self._device = self._get_tf_device(use_gpu=use_gpu)
+        self._device = self._get_tf_device(use_gpu=use_gpu) #does not exist
 
         with tf.device(self._device):
             self._optimizer = optimizer
