@@ -19,8 +19,8 @@ from substrafl.exceptions import OptimizerValueError
 from substrafl.index_generator import BaseIndexGenerator
 from substrafl.remote.decorators import remote_data
 
-from tf_data_loader import tf_dataloader
-import weight_manager
+from tensorflow_algorithms.tf_data_loader import tf_dataloader
+import tensorflow_algorithms.weight_manager
 
 import pickle
 

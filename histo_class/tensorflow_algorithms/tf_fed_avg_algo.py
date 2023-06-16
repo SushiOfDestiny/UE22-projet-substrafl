@@ -14,8 +14,8 @@ from substrafl.schemas import FedAvgSharedState
 from substrafl.schemas import StrategyName
 
 
-import weight_manager
-from tf_base_algo import TFAlgo
+import tensorflow_algorithms.weight_manager
+from tensorflow_algorithms.tf_base_algo import TFAlgo
 
 
 logger = logging.getLogger(__name__)
