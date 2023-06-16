@@ -20,7 +20,7 @@ from substrafl.index_generator import BaseIndexGenerator
 from substrafl.remote.decorators import remote_data
 
 from tensorflow_algorithms.tf_data_loader import tf_dataloader
-import tensorflow_algorithms.weight_manager
+import tensorflow_algorithms.weight_manager as weight_manager
 
 import pickle
 
@@ -51,28 +51,28 @@ class TFAlgo(Algo):
         if seed is not None:
             tf.random.set_seed(seed)
 
-        self._device = self._get_tf_device(use_gpu=use_gpu) #does not exist
+        # self._device = self._get_tf_device(use_gpu=use_gpu) #does not exist
 
-        with tf.device(self._device):
-            self._optimizer = optimizer
-            # Move the optimizer to GPU if needed
-            #https://www.tensorflow.org/guide/gpu
-            if self._optimizer is not None:
-                gpus = tf.config.list_physical_devices('GPU')
-                if gpus:
-                    # Restrict TensorFlow to only use the first GPU
-                    try:
-                        tf.config.set_visible_devices(gpus, 'GPU')
-                        logical_gpus = tf.config.list_logical_devices('GPU')
-                    except RuntimeError as e:
-                        # Visible devices must be set before GPUs have been initialized
-                        print(e)
-            self._criterion = criterion
-            self._scheduler = scheduler
+        # with tf.device(self._device):
+            # self._optimizer = optimizer
+            # # Move the optimizer to GPU if needed
+            # #https://www.tensorflow.org/guide/gpu
+            # if self._optimizer is not None:
+            #     gpus = tf.config.list_physical_devices('GPU')
+            #     if gpus:
+            #         # Restrict TensorFlow to only use the first GPU
+            #         try:
+            #             tf.config.set_visible_devices(gpus, 'GPU')
+            #             logical_gpus = tf.config.list_logical_devices('GPU')
+            #         except RuntimeError as e:
+            #             # Visible devices must be set before GPUs have been initialized
+            #             print(e)
+        self._criterion = criterion
+        self._scheduler = scheduler
 
-            self._index_generator = index_generator
-            self._dataset: tf.data.Dataset = dataset
-            # dataset check overlooked
+        self._index_generator = index_generator
+        self._dataset: tf.data.Dataset = dataset
+        # dataset check overlooked
 
     @property
     def model(self) -> tf.keras.Sequential:
@@ -159,14 +159,14 @@ class TFAlgo(Algo):
         predictions = tf.constant([])
         if inference_mode:
             # Code specific to the inference mode
-            with tf.device(self._device):
-                for x in predict_loader:
-                    predictions = tf.concat([predictions, self._model(x)], 0)
+            # with tf.device(self._device):
+            for x in predict_loader:
+                predictions = tf.concat([predictions, self._model(x)], 0)
 
-        with tf.device('CPU:0'):
-            # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
-            predictions = tf.identity(predictions)
-            self._save_predictions(predictions, predictions_path)
+        # with tf.device('CPU:0'):
+        # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
+        predictions = tf.identity(predictions)
+        self._save_predictions(predictions, predictions_path)
 
     def _local_train(
             self,
@@ -198,27 +198,27 @@ class TFAlgo(Algo):
             train_data_loader = train_dataset
 
             # Changing device
-            with tf.device(self._device):
-                for x_batch, y_batch in train_data_loader:
-                    
-                    # x_batch = x_batch.to(self._device)
-                    # y_batch = y_batch.to(self._device)
+            # with tf.device(self._device):
+            for x_batch, y_batch in train_data_loader:
+                
+                # x_batch = x_batch.to(self._device)
+                # y_batch = y_batch.to(self._device)
 
-                    # cf https://www.tensorflow.org/overview?hl=fr "For experts"
-                    # Forward pass
-                    y_pred = self._model(x_batch, training=True)
+                # cf https://www.tensorflow.org/overview?hl=fr "For experts"
+                # Forward pass
+                y_pred = self._model(x_batch, training=True)
 
-                    # Compute loss
-                    loss = self._criterion(y_batch, y_pred)
+                # Compute loss
+                loss = self._criterion(y_batch, y_pred)
 
-                    # Calculate gradients
-                    grads = tf.GradientTape.gradient(loss, self._model.trainable_variables)
+                # Calculate gradients
+                grads = tf.GradientTape.gradient(loss, self._model.trainable_variables)
 
-                    # Apply gradients
-                    self._optimizer.apply_gradients(zip(grads, self._model.trainable_variables))
+                # Apply gradients
+                self._optimizer.apply_gradients(zip(grads, self._model.trainable_variables))
 
-                    if self._scheduler is not None:
-                        self._scheduler.step()
+                if self._scheduler is not None:
+                    self._scheduler.step()
 
 
     def _update_from_checkpoint(self, path: Path) -> dict:

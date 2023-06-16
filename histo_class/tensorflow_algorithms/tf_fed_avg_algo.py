@@ -142,13 +142,13 @@ class TFFedAvgAlgo(TFAlgo):
             assert self._index_generator.n_samples is not None
             # The shared states is the average of the model parameter updates for all organizations
             # Hence we need to add it to the previous local state parameters
-            with tf.device(self._device):
+            # with tf.device(self._device):
                 # parameter_updates = [tf.convert_to_tensor(x) for x in shared_state.avg_parameters_update]
-                parameter_updates = [tf.Variable(initial_value=x, dtype='float64') for x in shared_state.avg_parameters_update]
-                weight_manager.increment_parameters(
-                    model=self._model,
-                    updates=parameter_updates,
-                )
+            parameter_updates = [tf.Variable(initial_value=x, dtype='float64') for x in shared_state.avg_parameters_update]
+            weight_manager.increment_parameters(
+                model=self._model,
+                updates=parameter_updates,
+            )
 
         self._index_generator.reset_counter()
 
@@ -175,14 +175,14 @@ class TFFedAvgAlgo(TFAlgo):
             old_parameters,
         )
 
-        with tf.device('CPU:0'):
-            # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
-            parameters_updated = [tf.identity(p).numpy() for p in parameters_update]
+        # with tf.device('CPU:0'):
+        # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
+        parameters_updated = [tf.identity(p).numpy() for p in parameters_update]
 
-            return FedAvgSharedState(
-                n_samples=len(train_dataset),
-                parameters_update=parameters_updated,
-            )
+        return FedAvgSharedState(
+            n_samples=len(train_dataset),
+            parameters_update=parameters_updated,
+        )
 
     def summary(self):
         """Summary of the class to be exposed in the experiment summary file
