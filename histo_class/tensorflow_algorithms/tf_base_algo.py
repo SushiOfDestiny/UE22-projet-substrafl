@@ -22,7 +22,7 @@ from substrafl.remote.decorators import remote_data
 from tensorflow_algorithms.tf_data_loader import tf_dataloader
 import tensorflow_algorithms.weight_manager as weight_manager
 
-import pickle
+import cloudpickle
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +67,9 @@ class TFAlgo(Algo):
             #         except RuntimeError as e:
             #             # Visible devices must be set before GPUs have been initialized
             #             print(e)
+        
+        self._model = model
+        self._optimizer = optimizer
         self._criterion = criterion
         self._scheduler = scheduler
 
@@ -245,27 +248,42 @@ class TFAlgo(Algo):
         assert path.is_file(), f'Cannot load the model - does not exist {list(path.parent.glob("*"))}'
         
         # we ignore the map_location arg
-        with open(path, "rb") as f:
-            checkpoint = pickle.load(path)
         
-        weight_manager.model_load_state_dict(self._model, checkpoint.pop("model_state_dict"))
+        # with open(path, "rb") as f:
+        #     checkpoint = cloudpickle.load(path)
+        
+        # weight_manager.model_load_state_dict(self._model, checkpoint.pop("model_state_dict"))
 
-        if self._optimizer is not None:
-            self._optimizer.from_config(checkpoint.pop("optimizer_state_dict"))
+        # if self._optimizer is not None:
+        #     self._optimizer.from_config(checkpoint.pop("optimizer_state_dict"))
 
-        if self._scheduler is not None:
-            self._scheduler.from_config(checkpoint.pop("scheduler_state_dict"))
+        # if self._scheduler is not None:
+        #     self._scheduler.from_config(checkpoint.pop("scheduler_state_dict"))
 
 
-        self._index_generator = checkpoint.pop("index_generator")
+        # self._index_generator = checkpoint.pop("index_generator")
 
         # following Torch code has not been implemented
         # if self._device == tf.device("cpu"):
         #     torch.set_rng_state(checkpoint.pop("rng_state").to(self._device))
         # else:
         #     torch.cuda.set_rng_state(checkpoint.pop("rng_state").to("cpu"))
+        
+        checkpoint = tf.train.Checkpoint(path)
+        
+        loaded_model = checkpoint.model
+        loaded_optimizer = checkpoint.optimizer
+        
+        # simpler version, but are there any reference problem ? 
+        # self._model = loaded_model
+        # self._optimizer = loaded_optimizer
 
-        return checkpoint
+        # a bit more complex version
+        self._model.set_weights(loaded_model.get_weights())
+        self._optimizer.from_config(loaded_optimizer.get_config())
+
+        # return checkpoint
+        return {}
     
     def load(self, path: Path) -> "TFAlgo":
         """Load the stateful arguments of this class.
@@ -347,10 +365,11 @@ class TFAlgo(Algo):
             path (pathlib.Path): A path where to save the class.
         """
         
-        # tf functions to save and load objecrs are quite different than torch's, we firstly try to imitate the latter 
-        # with the pickle module
-        with open(path, "wb") as f:
-            pickle.dump(self._get_state_to_save(), f)
+        # with open(path, "wb") as f:
+        #     cloudpickle.dump(self._get_state_to_save(), f)
+        checkpoint = tf.train.Checkpoint(model=self._model, optimizer=self._optimizer)
+        checkpoint.save(path)
+
 
         assert path.is_file(), f'Did not save the model properly {list(path.parent.glob("*"))}'
     
