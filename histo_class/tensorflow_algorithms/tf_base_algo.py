@@ -22,7 +22,7 @@ from substrafl.remote.decorators import remote_data
 from tensorflow_algorithms.tf_data_loader import tf_dataloader
 import tensorflow_algorithms.weight_manager as weight_manager
 
-import pickle
+import cloudpickle
 
 
 logger = logging.getLogger(__name__)
@@ -246,7 +246,7 @@ class TFAlgo(Algo):
         
         # we ignore the map_location arg
         with open(path, "rb") as f:
-            checkpoint = pickle.load(path)
+            checkpoint = cloudpickle.load(path)
         
         weight_manager.model_load_state_dict(self._model, checkpoint.pop("model_state_dict"))
 
@@ -350,7 +350,7 @@ class TFAlgo(Algo):
         # tf functions to save and load objecrs are quite different than torch's, we firstly try to imitate the latter 
         # with the pickle module
         with open(path, "wb") as f:
-            pickle.dump(self._get_state_to_save(), f)
+            cloudpickle.dump(self._get_state_to_save(), f)
 
         assert path.is_file(), f'Did not save the model properly {list(path.parent.glob("*"))}'
     
