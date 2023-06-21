@@ -1,3 +1,4 @@
 substra==0.42.0
 substrafl==0.34.0
+matplotlib==3.5.2
 tensorflow=2.12.0
