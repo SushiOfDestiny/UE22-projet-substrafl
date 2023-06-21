@@ -54,7 +54,7 @@ class TFFedAvgAlgo(TFAlgo):
         optimizer: tf.keras.optimizers.Optimizer,
         index_generator: BaseIndexGenerator,
         dataset: tf.data.Dataset,
-        scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        # scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         seed: Optional[int] = None,
         use_gpu: bool = True,
         # We ignore batch norm
@@ -90,7 +90,7 @@ class TFFedAvgAlgo(TFAlgo):
             optimizer=optimizer,
             index_generator=index_generator,
             dataset=dataset,
-            scheduler=scheduler,
+            # scheduler=scheduler,
             seed=seed,
             use_gpu=use_gpu,
             *args,

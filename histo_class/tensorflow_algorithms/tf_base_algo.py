@@ -38,7 +38,7 @@ class TFAlgo(Algo):
         index_generator: Union[BaseIndexGenerator, None],
         dataset: tf.data.Dataset,
         optimizer: Optional[keras.optimizers.Optimizer] = None,
-        scheduler: Optional[keras.optimizers.schedules.LearningRateSchedule] = None,
+        # scheduler: Optional[keras.optimizers.schedules.LearningRateSchedule] = None,
         seed: Optional[int] = None,
         use_gpu: bool = True,
         *args,
@@ -73,7 +73,7 @@ class TFAlgo(Algo):
         self._model = model
         self._optimizer = optimizer
         self._criterion = criterion
-        self._scheduler = scheduler
+        # self._scheduler = scheduler
 
         self._index_generator = index_generator
         self._dataset: tf.data.Dataset = dataset
@@ -222,8 +222,8 @@ class TFAlgo(Algo):
                 # Apply gradients
                 self._optimizer.apply_gradients(zip(grads, self._model.trainable_variables))
 
-                if self._scheduler is not None:
-                    self._scheduler.step()
+                # if self._scheduler is not None:
+                    # self._scheduler.step()
 
 
     def _update_from_checkpoint(self, path: Path) -> dict:
@@ -328,9 +328,9 @@ class TFAlgo(Algo):
         if self._optimizer is not None:
             # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
             checkpoint["optimizer_state_dict"] = self._optimizer.get_config()
-        if self._scheduler is not None:
-            # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
-            checkpoint["scheduler_state_dict"] = self._scheduler.get_config()
+        # if self._scheduler is not None:
+            # # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
+            # checkpoint["scheduler_state_dict"] = self._scheduler.get_config()
 
         return checkpoint
     
@@ -405,7 +405,7 @@ class TFAlgo(Algo):
                     "type": str(type(self._optimizer)),
                     "parameters": self._optimizer.get_config(),
                 },
-                "scheduler": None if self._scheduler is None else str(type(self._scheduler)),
+                # "scheduler": None if self._scheduler is None else str(type(self._scheduler)),
             }
         )
         return summary
