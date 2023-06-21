@@ -24,6 +24,8 @@ import tensorflow_algorithms.weight_manager as weight_manager
 
 import cloudpickle
 
+import keras
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,12 +33,12 @@ class TFAlgo(Algo):
 
     def __init__(
         self,
-        model: tf.keras.Sequential,
-        criterion: tf.keras.losses.Loss,
+        model: keras.Sequential,
+        criterion: keras.losses.Loss,
         index_generator: Union[BaseIndexGenerator, None],
         dataset: tf.data.Dataset,
-        optimizer: Optional[tf.keras.optimizers.Optimizer] = None,
-        scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        optimizer: Optional[keras.optimizers.Optimizer] = None,
+        scheduler: Optional[keras.optimizers.schedules.LearningRateSchedule] = None,
         seed: Optional[int] = None,
         use_gpu: bool = True,
         *args,
@@ -78,7 +80,7 @@ class TFAlgo(Algo):
         # dataset check overlooked
 
     @property
-    def model(self) -> tf.keras.Sequential:
+    def model(self) -> keras.Sequential:
         """Model exposed when the user downloads the model
 
         Returns:
@@ -155,7 +157,7 @@ class TFAlgo(Algo):
             )
 
         # Equivalent of self._model.eval() : desactivate the variables not used for prediction
-        tf.keras.backend.set_learning_phase(0)
+        keras.backend.set_learning_phase(0)
         # Variable controlling the inference mode
         inference_mode = tf.Variable(True, trainable=False)
 
@@ -401,7 +403,7 @@ class TFAlgo(Algo):
                 if self._optimizer is None
                 else {
                     "type": str(type(self._optimizer)),
-                    "parameters": self._optimizer.defaults,
+                    "parameters": self._optimizer.get_config(),
                 },
                 "scheduler": None if self._scheduler is None else str(type(self._scheduler)),
             }
