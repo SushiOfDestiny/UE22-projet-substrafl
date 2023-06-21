@@ -384,7 +384,7 @@ class TFAlgo(Algo):
                 if self._optimizer is None
                 else {
                     "type": str(type(self._optimizer)),
-                    "parameters": self._optimizer.defaults,
+                    "parameters": self._optimizer.get_config(),
                 },
                 "scheduler": None if self._scheduler is None else str(type(self._scheduler)),
             }
