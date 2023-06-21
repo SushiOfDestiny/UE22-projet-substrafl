@@ -9,7 +9,7 @@ from typing import Optional
 from typing import Union
 
 import numpy as np
-import tensorflow as tf 
+import tensorflow as tf
 
 from substrafl.algorithms.algo import Algo
 from substrafl.exceptions import BatchSizeNotFoundError
@@ -27,8 +27,8 @@ import cloudpickle
 
 logger = logging.getLogger(__name__)
 
-class TFAlgo(Algo):
 
+class TFAlgo(Algo):
     def __init__(
         self,
         model: tf.keras.Sequential,
@@ -54,20 +54,20 @@ class TFAlgo(Algo):
         # self._device = self._get_tf_device(use_gpu=use_gpu) #does not exist
 
         # with tf.device(self._device):
-            # self._optimizer = optimizer
-            # # Move the optimizer to GPU if needed
-            # #https://www.tensorflow.org/guide/gpu
-            # if self._optimizer is not None:
-            #     gpus = tf.config.list_physical_devices('GPU')
-            #     if gpus:
-            #         # Restrict TensorFlow to only use the first GPU
-            #         try:
-            #             tf.config.set_visible_devices(gpus, 'GPU')
-            #             logical_gpus = tf.config.list_logical_devices('GPU')
-            #         except RuntimeError as e:
-            #             # Visible devices must be set before GPUs have been initialized
-            #             print(e)
-        
+        # self._optimizer = optimizer
+        # # Move the optimizer to GPU if needed
+        # #https://www.tensorflow.org/guide/gpu
+        # if self._optimizer is not None:
+        #     gpus = tf.config.list_physical_devices('GPU')
+        #     if gpus:
+        #         # Restrict TensorFlow to only use the first GPU
+        #         try:
+        #             tf.config.set_visible_devices(gpus, 'GPU')
+        #             logical_gpus = tf.config.list_logical_devices('GPU')
+        #         except RuntimeError as e:
+        #             # Visible devices must be set before GPUs have been initialized
+        #             print(e)
+
         self._model = model
         self._optimizer = optimizer
         self._criterion = criterion
@@ -94,7 +94,7 @@ class TFAlgo(Algo):
     ) -> Any:
         # Must be implemented in the child class
         raise NotImplementedError()
-    
+
     @remote_data
     def predict(self, datasamples: Any, shared_state: Any = None, predictions_path: os.PathLike = None) -> Any:
         """Execute the following operations:
@@ -111,7 +111,7 @@ class TFAlgo(Algo):
         # Create tf dataset
         predict_dataset = self._dataset(datasamples, is_inference=True)
         self._local_predict(predict_dataset=predict_dataset, predictions_path=predictions_path)
-    
+
     def _save_predictions(self, predictions: tf.Tensor, predictions_path: os.PathLike):
         """Save the predictions under the numpy format.
 
@@ -123,7 +123,7 @@ class TFAlgo(Algo):
             np.save(predictions_path, predictions)
             # Create a folder ??
             shutil.move(str(predictions_path) + ".npy", predictions_path)
-    
+
     def _local_predict(self, predict_dataset: tf.data.Dataset, predictions_path):
         """Execute the following operations:
 
@@ -172,57 +172,59 @@ class TFAlgo(Algo):
         self._save_predictions(predictions, predictions_path)
 
     def _local_train(
-            self,
-            train_dataset: tf.data.Dataset,
-        ):
-            """Local train method. Contains the local training loop.
+        self,
+        train_dataset: tf.data.Dataset,
+    ):
+        """Local train method. Contains the local training loop.
 
-            Train the model on ``num_updates`` minibatches, using the ``self._index_generator generator`` as batch sampler
-            for the tf dataset.
+        Train the model on ``num_updates`` minibatches, using the ``self._index_generator generator`` as batch sampler
+        for the tf dataset.
 
-            Args:
-                train_dataset (TFDataset / tf.data.Dataset): train_dataset build from the x and y returned by the opener.
+        Args:
+            train_dataset (TFDataset / tf.data.Dataset): train_dataset build from the x and y returned by the opener.
 
-            Important:
+        Important:
 
-                You must use ``next(self._index_generator)`` as batch sampler,
-                to ensure that the batches you are using are correct between 2 rounds
-                of the federated learning strategy.
-            """
-            if self._optimizer is None:
-                raise OptimizerValueError(
-                    "No optimizer found. Either give one or overwrite the _local_train method from the used torch"
-                    "algorithm."
-                )
+            You must use ``next(self._index_generator)`` as batch sampler,
+            to ensure that the batches you are using are correct between 2 rounds
+            of the federated learning strategy.
+        """
+        if self._optimizer is None:
+            raise OptimizerValueError(
+                "No optimizer found. Either give one or overwrite the _local_train method from the used torch"
+                "algorithm."
+            )
+        else:
+            optimizer = tf.keras.optimizers.serialize(self._optimizer)
 
-            # Create tf dataloader
-            # train_data_loader = tf_dataloader(train_dataset, batch_sampler=self._index_generator) # reminder: class(train_dataset) = TFDataset / tf.data.Dataset
-            # avoiding the loader probleme
-            train_data_loader = train_dataset
+        # Create tf dataloader
+        # train_data_loader = tf_dataloader(train_dataset, batch_sampler=self._index_generator) # reminder: class(train_dataset) = TFDataset / tf.data.Dataset
+        # avoiding the loader probleme
+        train_data_loader = train_dataset
 
-            # Changing device
-            # with tf.device(self._device):
-            for x_batch, y_batch in train_data_loader:
-                
-                # x_batch = x_batch.to(self._device)
-                # y_batch = y_batch.to(self._device)
+        # Changing device
+        # with tf.device(self._device):
+        for x_batch, y_batch in train_data_loader:
+            # x_batch = x_batch.to(self._device)
+            # y_batch = y_batch.to(self._device)
 
-                # cf https://www.tensorflow.org/overview?hl=fr "For experts"
-                # Forward pass
-                y_pred = self._model(x_batch, training=True)
+            # cf https://www.tensorflow.org/overview?hl=fr "For experts"
+            # Forward pass
+            y_pred = self._model(x_batch, training=True)
 
-                # Compute loss
-                loss = self._criterion(y_batch, y_pred)
+            # Compute loss
+            loss = self._criterion(y_batch, y_pred)
 
-                # Calculate gradients
-                grads = tf.GradientTape.gradient(loss, self._model.trainable_variables)
+            # Calculate gradients
+            grads = tf.GradientTape.gradient(loss, self._model.trainable_variables)
 
-                # Apply gradients
-                self._optimizer.apply_gradients(zip(grads, self._model.trainable_variables))
+            # Apply gradients
+            optimizer.apply_gradients(zip(grads, self._model.trainable_variables))
 
-                if self._scheduler is not None:
-                    self._scheduler.step()
+            self._optimizer = tf.keras.optimizers.serialize(optimizer)
 
+            if self._scheduler is not None:
+                self._scheduler.step()
 
     def _update_from_checkpoint(self, path: Path) -> dict:
         """Load the checkpoint and update the internal state
@@ -246,12 +248,12 @@ class TFAlgo(Algo):
                     return checkpoint
         """
         assert path.is_file(), f'Cannot load the model - does not exist {list(path.parent.glob("*"))}'
-        
+
         # we ignore the map_location arg
-        
+
         # with open(path, "rb") as f:
         #     checkpoint = cloudpickle.load(path)
-        
+
         # weight_manager.model_load_state_dict(self._model, checkpoint.pop("model_state_dict"))
 
         # if self._optimizer is not None:
@@ -260,7 +262,6 @@ class TFAlgo(Algo):
         # if self._scheduler is not None:
         #     self._scheduler.from_config(checkpoint.pop("scheduler_state_dict"))
 
-
         # self._index_generator = checkpoint.pop("index_generator")
 
         # following Torch code has not been implemented
@@ -268,13 +269,13 @@ class TFAlgo(Algo):
         #     torch.set_rng_state(checkpoint.pop("rng_state").to(self._device))
         # else:
         #     torch.cuda.set_rng_state(checkpoint.pop("rng_state").to("cpu"))
-        
+
         checkpoint = tf.train.Checkpoint(path)
-        
+
         loaded_model = checkpoint.model
         loaded_optimizer = checkpoint.optimizer
-        
-        # simpler version, but are there any reference problem ? 
+
+        # simpler version, but are there any reference problem ?
         # self._model = loaded_model
         # self._optimizer = loaded_optimizer
 
@@ -284,7 +285,7 @@ class TFAlgo(Algo):
 
         # return checkpoint
         return {}
-    
+
     def load(self, path: Path) -> "TFAlgo":
         """Load the stateful arguments of this class.
         Child classes do not need to override that function.
@@ -298,7 +299,7 @@ class TFAlgo(Algo):
         checkpoint = self._update_from_checkpoint(path=path)
         assert len(checkpoint) == 0, f"Not all values from the checkpoint have been used: {checkpoint.keys()}"
         return self
-    
+
     def _get_state_to_save(self) -> dict:
         """Create the algo checkpoint: a dictionary
         saved with tf ???.
@@ -325,13 +326,13 @@ class TFAlgo(Algo):
         }
         if self._optimizer is not None:
             # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
-            checkpoint["optimizer_state_dict"] = self._optimizer.get_config()
+            checkpoint["optimizer_state_dict"] = self._optimizer
         if self._scheduler is not None:
             # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
             checkpoint["scheduler_state_dict"] = self._scheduler.get_config()
 
         return checkpoint
-    
+
     def _check_tf_dataset(self):
         # Check that the given Dataset is not an instance
         try:
@@ -356,7 +357,7 @@ class TFAlgo(Algo):
             raise DatasetSignatureError(
                 "The __init__() function of the tf Dataset must contain is_inference as parameter."
             )
-        
+
     def save(self, path: Path):
         """Saves all the stateful elements of the class to the specified path.
         Child classes do not need to override that function.
@@ -364,15 +365,14 @@ class TFAlgo(Algo):
         Args:
             path (pathlib.Path): A path where to save the class.
         """
-        
+
         # with open(path, "wb") as f:
         #     cloudpickle.dump(self._get_state_to_save(), f)
         checkpoint = tf.train.Checkpoint(model=self._model, optimizer=self._optimizer)
         checkpoint.save(path)
 
-
         assert path.is_file(), f'Did not save the model properly {list(path.parent.glob("*"))}'
-    
+
     def summary(self):
         """Summary of the class to be exposed in the experiment summary file.
         Implement this function in the child class to add strategy-specific variables. The variables
@@ -407,4 +407,3 @@ class TFAlgo(Algo):
             }
         )
         return summary
-

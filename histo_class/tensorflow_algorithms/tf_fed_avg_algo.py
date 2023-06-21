@@ -5,8 +5,8 @@ from typing import Optional
 
 import tensorflow as tf
 
-#from substrafl.algorithms.pytorch import weight_manager
-#from substrafl.algorithms.pytorch.torch_base_algo import TorchAlgo
+# from substrafl.algorithms.pytorch import weight_manager
+# from substrafl.algorithms.pytorch.torch_base_algo import TorchAlgo
 from substrafl.index_generator import BaseIndexGenerator
 from substrafl.remote import remote_data
 from substrafl.schemas import FedAvgAveragedState
@@ -19,8 +19,6 @@ from tensorflow_algorithms.tf_base_algo import TFAlgo
 
 
 logger = logging.getLogger(__name__)
-
-
 
 
 class TFFedAvgAlgo(TFAlgo):
@@ -143,8 +141,10 @@ class TFFedAvgAlgo(TFAlgo):
             # The shared states is the average of the model parameter updates for all organizations
             # Hence we need to add it to the previous local state parameters
             # with tf.device(self._device):
-                # parameter_updates = [tf.convert_to_tensor(x) for x in shared_state.avg_parameters_update]
-            parameter_updates = [tf.Variable(initial_value=x, dtype='float64') for x in shared_state.avg_parameters_update]
+            # parameter_updates = [tf.convert_to_tensor(x) for x in shared_state.avg_parameters_update]
+            parameter_updates = [
+                tf.Variable(initial_value=x, dtype="float64") for x in shared_state.avg_parameters_update
+            ]
             weight_manager.increment_parameters(
                 model=self._model,
                 updates=parameter_updates,
