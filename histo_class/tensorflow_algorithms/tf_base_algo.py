@@ -67,6 +67,8 @@ class TFAlgo(Algo):
             #         except RuntimeError as e:
             #             # Visible devices must be set before GPUs have been initialized
             #             print(e)
+        self._model = model
+        self._optimizer = optimizer
         self._criterion = criterion
         self._scheduler = scheduler
 
@@ -246,7 +248,7 @@ class TFAlgo(Algo):
         
         # we ignore the map_location arg
         with open(path, "rb") as f:
-            checkpoint = cloudpickle.load(path)
+            checkpoint = cloudpickle.load(f)
         
         weight_manager.model_load_state_dict(self._model, checkpoint.pop("model_state_dict"))
 
@@ -347,7 +349,7 @@ class TFAlgo(Algo):
             path (pathlib.Path): A path where to save the class.
         """
         
-        # tf functions to save and load objecrs are quite different than torch's, we firstly try to imitate the latter 
+        # tf functions to save and load objects are quite different than torch's, we firstly try to imitate the latter 
         # with the pickle module
         with open(path, "wb") as f:
             cloudpickle.dump(self._get_state_to_save(), f)
