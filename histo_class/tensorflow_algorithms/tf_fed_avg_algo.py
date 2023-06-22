@@ -84,6 +84,8 @@ class TFFedAvgAlgo(TFAlgo):
             seed (typing.Optional[int]): Seed set at the algo initialization on each organization. Defaults to None.
             use_gpu (bool): Whether to use the GPUs if they are available. Defaults to True.
         """
+
+        # initialized exactly like TFAlgo
         super().__init__(
             model=model,
             criterion=criterion,
@@ -145,35 +147,31 @@ class TFFedAvgAlgo(TFAlgo):
             # with tf.device(self._device):
                 # parameter_updates = [tf.convert_to_tensor(x) for x in shared_state.avg_parameters_update]
             parameter_updates = [tf.Variable(initial_value=x, dtype='float64') for x in shared_state.avg_parameters_update]
+            
+            model=self.model_deserialize()
+
             weight_manager.increment_parameters(
-                model=self._model,
+                model=model,
                 updates=parameter_updates,
             )
+            self.model_serialize(model)
 
         self._index_generator.reset_counter()
 
-        old_parameters = self._model.get_weights()
-
-        # Train mode for tensorflow model
-        self._model.train()
+        old_parameters = self._model["weights"]
 
         # Train the model
         self._local_train(train_dataset)
-
+        
         self._index_generator.check_num_updates()
 
-        # Equivalent of self._model.eval() : desactivate the variables not used for prediction
-        tf.keras.backend.set_learning_phase(0)
-
         parameters_update = weight_manager.subtract_parameters(
-            parameters=self._model.get_weights(),
+            parameters=self._model["weights"],
             parameters_to_subtract=old_parameters,
         )
 
         # Re set to the previous state
-        self._model.set_weights(
-            old_parameters,
-        )
+        self._model["weights"] = old_parameters
 
         # with tf.device('CPU:0'):
         # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
