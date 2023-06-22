@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-import keras
+# import tf.keras
 # Setup
 # *****
 
@@ -191,26 +191,33 @@ metric_key = add_metric(
 seed = 42
 tf.random.set_seed(seed)
 
-# @keras.utils.register_keras_serializable(keras.Sequential)
-class CNN(keras.Sequential):
+# @tf.keras.utils.register_keras_serializable(tf.keras.Sequential)
+class CNN(tf.keras.Sequential):
     def __init__(self):
         super(CNN, self).__init__(layers=[
-            keras.layers.Rescaling(1./255, input_shape=(150,150,3)),
-            keras.layers.Conv2D(32, 5, activation='relu'),
-            keras.layers.MaxPooling2D(),
-            keras.layers.Conv2D(64, 5, activation='relu'),
-            keras.layers.MaxPooling2D(),
-            keras.layers.Conv2D(128, 5, activation='relu'),
-            keras.layers.MaxPooling2D(),
-            keras.layers.Flatten(),
-            keras.layers.Dense(128, activation='relu'),
-            keras.layers.Dense(8, activation= 'softmax')
+            tf.keras.layers.Rescaling(1./255, input_shape=(150,150,3)),
+            tf.keras.layers.Conv2D(32, 5, activation='relu'),
+            tf.keras.layers.MaxPooling2D(),
+            tf.keras.layers.Conv2D(64, 5, activation='relu'),
+            tf.keras.layers.MaxPooling2D(),
+            tf.keras.layers.Conv2D(128, 5, activation='relu'),
+            tf.keras.layers.MaxPooling2D(),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dense(8, activation= 'softmax')
         ])
+
 model = CNN()
 
-optimizer = keras.optimizers.Adam(learning_rate=0.001)
+optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-criterion = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+criterion = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+
+####################
+# use of checkpoint
+# init_checkpoint = tf.train.Checkpoint
+
+
 # Specifying on how much data to train
 
 # To specify on how much data to train at each round, we use the `index_generator` object.
