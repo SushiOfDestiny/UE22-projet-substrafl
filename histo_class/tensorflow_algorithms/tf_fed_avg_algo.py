@@ -47,17 +47,32 @@ class TFFedAvgAlgo(TFAlgo):
     Example: TODO
     """
 
+    # def __init__(
+    #     self,
+    #     model: tf.keras.Sequential,
+    #     criterion: tf.keras.losses.Loss,
+    #     optimizer: tf.keras.optimizers.Optimizer,
+    #     index_generator: BaseIndexGenerator,
+    #     dataset: tf.data.Dataset,
+    #     scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+    #     seed: Optional[int] = None,
+    #     use_gpu: bool = True,
+    #     # We ignore batch norm
+    #     *args,
+    #     **kwargs,
+    # ):
+
+    # Checkpoint version
     def __init__(
         self,
-        model: tf.keras.Sequential,
+        model: tf.train.Checkpoint,
         criterion: tf.keras.losses.Loss,
-        optimizer: tf.keras.optimizers.Optimizer,
         index_generator: BaseIndexGenerator,
         dataset: tf.data.Dataset,
+        optimizer: Optional[tf.train.Checkpoint] = None,
         scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         seed: Optional[int] = None,
         use_gpu: bool = True,
-        # We ignore batch norm
         *args,
         **kwargs,
     ):
@@ -84,6 +99,20 @@ class TFFedAvgAlgo(TFAlgo):
             seed (typing.Optional[int]): Seed set at the algo initialization on each organization. Defaults to None.
             use_gpu (bool): Whether to use the GPUs if they are available. Defaults to True.
         """
+        # super().__init__(
+        #     model=model,
+        #     criterion=criterion,
+        #     optimizer=optimizer,
+        #     index_generator=index_generator,
+        #     dataset=dataset,
+        #     scheduler=scheduler,
+        #     seed=seed,
+        #     use_gpu=use_gpu,
+        #     *args,
+        #     **kwargs,
+        # )
+
+        # Checkpoint version
         super().__init__(
             model=model,
             criterion=criterion,
@@ -97,6 +126,17 @@ class TFFedAvgAlgo(TFAlgo):
             **kwargs,
         )
 
+        # rewriting what is in TFAlgo
+        self._model = self.model.model
+        assert isinstance(self._model, tf.keras.Sequential), f"self._model is wrongly instanced, and its type is {type(self._model)}"
+        
+        self._optimizer = self.optimizer.optimizer
+        self._criterion = criterion
+        self._scheduler = scheduler
+
+        self._index_generator = index_generator
+        self._dataset: tf.data.Dataset = dataset
+    
     @property
     def strategies(self) -> List[StrategyName]:
         """List of compatible strategies

@@ -211,6 +211,21 @@ model = CNN()
 optimizer = keras.optimizers.Adam(learning_rate=0.001)
 
 criterion = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+
+#################
+# trying to use checkpoint to serialize
+model_checkpoint = tf.train.Checkpoint(model=model)
+optimizer_checkpoint = tf.train.Checkpoint(optimizer=optimizer)
+
+
+
+
+
+
+
+
+
+
 # Specifying on how much data to train
 
 # To specify on how much data to train at each round, we use the `index_generator` object.
@@ -330,11 +345,23 @@ from tensorflow_algorithms.tf_fed_avg_algo import TFFedAvgAlgo
 
 
 class MyAlgo(TFFedAvgAlgo):
+    # def __init__(self):
+    #     super().__init__(
+    #         model=model,
+    #         criterion=criterion,
+    #         optimizer=optimizer,
+    #         index_generator=index_generator,
+    #         dataset=TFDataset,
+    #         seed=seed,
+    #     )
+
+    ####################
+    # new init with checkpoints
     def __init__(self):
         super().__init__(
-            model=model,
+            model=model_checkpoint,
             criterion=criterion,
-            optimizer=optimizer,
+            optimizer=optimizer_checkpoint,
             index_generator=index_generator,
             dataset=TFDataset,
             seed=seed,

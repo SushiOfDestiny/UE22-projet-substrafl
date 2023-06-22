@@ -28,14 +28,29 @@ import cloudpickle
 logger = logging.getLogger(__name__)
 
 class TFAlgo(Algo):
-
+    # def __init__(
+    #     self,
+    #     model: tf.keras.Sequential,
+    #     criterion: tf.keras.losses.Loss,
+    #     optimizer: tf.keras.optimizers.Optimizer,
+    #     index_generator: BaseIndexGenerator,
+    #     dataset: tf.data.Dataset,
+    #     scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+    #     seed: Optional[int] = None,
+    #     use_gpu: bool = True,
+    #     # We ignore batch norm
+    #     *args,
+    #     **kwargs,
+    # ):
+        
+    # Checkpoint version
     def __init__(
         self,
-        model: tf.keras.Sequential,
+        model: tf.train.Checkpoint,
         criterion: tf.keras.losses.Loss,
         index_generator: Union[BaseIndexGenerator, None],
         dataset: tf.data.Dataset,
-        optimizer: Optional[tf.keras.optimizers.Optimizer] = None,
+        optimizer: Optional[tf.train.Checkpoint] = None,
         scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         seed: Optional[int] = None,
         use_gpu: bool = True,
@@ -50,6 +65,18 @@ class TFAlgo(Algo):
 
         if seed is not None:
             tf.random.set_seed(seed)
+
+        # INITIALIZATION
+        self._model = self.model.model
+        assert isinstance(self._model, tf.keras.Sequential), f"self._model is wrongly instanced, and its type is {type(self._model)}"
+        
+        self._optimizer = self.optimizer.optimizer
+        self._criterion = criterion
+        self._scheduler = scheduler
+
+        self._index_generator = index_generator
+        self._dataset: tf.data.Dataset = dataset
+        # dataset check overlooked
 
         # self._device = self._get_tf_device(use_gpu=use_gpu) #does not exist
 
@@ -68,14 +95,7 @@ class TFAlgo(Algo):
             #             # Visible devices must be set before GPUs have been initialized
             #             print(e)
         
-        self._model = model
-        self._optimizer = optimizer
-        self._criterion = criterion
-        self._scheduler = scheduler
-
-        self._index_generator = index_generator
-        self._dataset: tf.data.Dataset = dataset
-        # dataset check overlooked
+        
 
     @property
     def model(self) -> tf.keras.Sequential:
@@ -299,38 +319,38 @@ class TFAlgo(Algo):
         assert len(checkpoint) == 0, f"Not all values from the checkpoint have been used: {checkpoint.keys()}"
         return self
     
-    def _get_state_to_save(self) -> dict:
-        """Create the algo checkpoint: a dictionary
-        saved with tf ???.
-        In this algo, it contains the state to save for every strategy.
-        Reimplement in the child class to add strategy-specific variables.
+    # def _get_state_to_save(self) -> dict:
+    #     """Create the algo checkpoint: a dictionary
+    #     saved with tf ???.
+    #     In this algo, it contains the state to save for every strategy.
+    #     Reimplement in the child class to add strategy-specific variables.
 
-        Example:
+    #     Example:
 
-            .. code-block:: python
+    #         .. code-block:: python
 
-                def _get_state_to_save(self) -> dict:
-                    local_state = super()._get_state_to_save()
-                    local_state.update({
-                        "strategy_specific_variable": self._strategy_specific_variable,
-                    })
-                    return local_state
+    #             def _get_state_to_save(self) -> dict:
+    #                 local_state = super()._get_state_to_save()
+    #                 local_state.update({
+    #                     "strategy_specific_variable": self._strategy_specific_variable,
+    #                 })
+    #                 return local_state
 
-        Returns:
-            dict: checkpoint to save
-        """
-        checkpoint = {
-            "model_state_dict": weight_manager.model_state_dict(self._model),
-            "index_generator": self._index_generator,
-        }
-        if self._optimizer is not None:
-            # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
-            checkpoint["optimizer_state_dict"] = self._optimizer.get_config()
-        if self._scheduler is not None:
-            # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
-            checkpoint["scheduler_state_dict"] = self._scheduler.get_config()
+    #     Returns:
+    #         dict: checkpoint to save
+    #     """
+    #     checkpoint = {
+    #         "model_state_dict": weight_manager.model_state_dict(self._model),
+    #         "index_generator": self._index_generator,
+    #     }
+    #     if self._optimizer is not None:
+    #         # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
+    #         checkpoint["optimizer_state_dict"] = self._optimizer.get_config()
+    #     if self._scheduler is not None:
+    #         # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
+    #         checkpoint["scheduler_state_dict"] = self._scheduler.get_config()
 
-        return checkpoint
+    #     return checkpoint
     
     def _check_tf_dataset(self):
         # Check that the given Dataset is not an instance
@@ -401,7 +421,7 @@ class TFAlgo(Algo):
                 if self._optimizer is None
                 else {
                     "type": str(type(self._optimizer)),
-                    "parameters": self._optimizer.defaults,
+                    "parameters": self._optimizer.get_config(),
                 },
                 "scheduler": None if self._scheduler is None else str(type(self._scheduler)),
             }
