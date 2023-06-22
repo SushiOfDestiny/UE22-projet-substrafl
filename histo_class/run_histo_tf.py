@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
+import tensorflow_algorithms.weight_manager as weight_manager
+
 # import tf.keras
 # Setup
 # *****
@@ -213,9 +215,13 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
 criterion = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
+# no scheduler used in the example
+
 ####################
-# use of checkpoint
-# init_checkpoint = tf.train.Checkpoint
+# SERIALIZING   
+# with dict
+model_state_dict = weight_manager.model_state_dict(model)
+optimizer_state_dict = optimizer.get_config()
 
 
 # Specifying on how much data to train
@@ -339,9 +345,9 @@ from tensorflow_algorithms.tf_fed_avg_algo import TFFedAvgAlgo
 class MyAlgo(TFFedAvgAlgo):
     def __init__(self):
         super().__init__(
-            model=model,
+            model=model_state_dict,
             criterion=criterion,
-            optimizer=optimizer,
+            optimizer=optimizer_state_dict,
             index_generator=index_generator,
             dataset=TFDataset,
             seed=seed,
