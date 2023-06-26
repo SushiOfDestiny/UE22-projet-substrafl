@@ -449,7 +449,7 @@ class TFAlgo(Algo):
                 if self._optimizer is None
                 else {
                     "type": "not visible yet",
-                    "parameters": self._optimizer,
+                    # "parameters": self._optimizer,
                 },
                 "scheduler": None if self._scheduler is None else "not visible yet",
             }
