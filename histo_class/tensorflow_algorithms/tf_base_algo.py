@@ -441,17 +441,18 @@ class TFAlgo(Algo):
             dict: a json-serializable dict with the attributes the user wants to store
         """
         summary = super().summary()
-        summary.update(
-            {
-                "model": str(type(self._model)),
-                "criterion": str(type(self._criterion)),
-                "optimizer": None
-                if self._optimizer is None
-                else {
-                    "type": "not visible yet",
-                    "parameters": self._optimizer,
-                },
-                "scheduler": None if self._scheduler is None else "not visible yet",
-            }
-        )
+        # Commenting the line "parameters": self._optimizer to debug other parts of the projects
+        #summary.update(
+        #    {
+        #        "model": str(type(self._model)),
+        #        "criterion": str(type(self._criterion)),
+        #        "optimizer": None
+        #        if self._optimizer is None
+        #        else {
+        #            "type": "not visible yet",
+        #            "parameters": self._optimizer,
+        #        },
+        #        "scheduler": None if self._scheduler is None else "not visible yet",
+        #    }
+        #)
         return summary
