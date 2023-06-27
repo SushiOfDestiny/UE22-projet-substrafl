@@ -343,7 +343,7 @@ test_ds = TFDataset(datasamples=data_sample1, is_inference=False)
 # fail so tf_data_loader doesn't work atm
 # SubstraFL algo definition
 from tensorflow_algorithms.tf_fed_avg_algo import TFFedAvgAlgo
-from tensorflow_algorithms import TFDatasetFile,
+from tensorflow_algorithms import TFDatasetFile
 TFDataset = TFDatasetFile.TFDataset
 
 
