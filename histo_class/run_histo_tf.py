@@ -236,15 +236,23 @@ model_state_dict = weight_manager.model_state_dict(model)
 from substrafl.index_generator import NpIndexGenerator
 
 # Number of model updates between each FL strategy aggregation.
-NUM_UPDATES = 100
-
+nb_samples = 5000
+nb_train_samples = 4000 # we split the data in 80% train / 20% eval
 # Number of samples per update.
 BATCH_SIZE = 32
 
-index_generator = NpIndexGenerator(
-    batch_size=BATCH_SIZE,
-    num_updates=NUM_UPDATES,
-)
+# Adjusting number of updates according to dataset size
+# but normally it should not be used
+NUM_UPDATES = np.floor(nb_train_samples / BATCH_SIZE)
+
+####################
+# no use of index_generator
+# index_generator = NpIndexGenerator(
+#     batch_size=BATCH_SIZE,
+#     num_updates=NUM_UPDATES,
+# )
+index_generator = None
+
 # TensorFlow Dataset definition
 
 # This tf Dataset is used to preprocess the data using the `__getitem__` function.

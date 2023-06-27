@@ -81,6 +81,8 @@ class TFAlgo(Algo):
         assert (self._scheduler is None), "Scheduler is not None"
 
         self._index_generator = index_generator
+        assert (self._index_generator is None), "Index Generator is not None"
+
         self._dataset: tf.data.Dataset = dataset
         # dataset check overlooked
 

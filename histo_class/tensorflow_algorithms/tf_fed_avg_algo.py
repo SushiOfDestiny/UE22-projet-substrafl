@@ -2,6 +2,7 @@ import logging
 from typing import Any
 from typing import List
 from typing import Optional
+from typing import Union
 
 import tensorflow as tf
 
@@ -52,7 +53,7 @@ class TFFedAvgAlgo(TFAlgo):
         model: tf.keras.Sequential,
         criterion: tf.keras.losses.Loss,
         optimizer: tf.keras.optimizers.Optimizer,
-        index_generator: BaseIndexGenerator,
+        index_generator: Union[BaseIndexGenerator, None], # no index_generator is allowed
         dataset: tf.data.Dataset,
         scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         seed: Optional[int] = None,
@@ -137,11 +138,13 @@ class TFFedAvgAlgo(TFAlgo):
         train_dataset = self._dataset(datasamples, is_inference=False)
 
         if shared_state is None:
-            # Instantiate the index_generator
-            assert self._index_generator.n_samples is None
-            self._index_generator.n_samples = len(train_dataset)
+            if self._index_generator is not None:
+                # Instantiate the index_generator
+                assert self._index_generator.n_samples is None
+                self._index_generator.n_samples = len(train_dataset)
         else:
-            assert self._index_generator.n_samples is not None
+            if self._index_generator is not None:
+                assert self._index_generator.n_samples is not None
             # The shared states is the average of the model parameter updates for all organizations
             # Hence we need to add it to the previous local state parameters
             # with tf.device(self._device):
@@ -161,14 +164,15 @@ class TFFedAvgAlgo(TFAlgo):
             # Reserializing
             self.model_serialize(model)
 
-        self._index_generator.reset_counter()
+        # self._index_generator.reset_counter()
 
         old_parameters = self._model["weights"]
 
         # Train the model
         self._local_train(train_dataset)
         
-        self._index_generator.check_num_updates()
+        if self._index_generator is not None:
+            self._index_generator.check_num_updates()
 
         parameters_update = weight_manager.subtract_parameters(
             parameters=self._model["weights"],
