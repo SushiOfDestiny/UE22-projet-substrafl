@@ -13,6 +13,8 @@ import tensorflow as tf
 import tensorflow_datasets as tfds
 
 import tensorflow_algorithms.weight_manager as weight_manager
+from tensorflow_algorithms import TFDatasetFile
+TFDataset = TFDatasetFile.TFDataset
 
 # import tf.keras
 # Setup
@@ -298,8 +300,6 @@ test_ds = TFDataset(datasamples=data_sample1, is_inference=False)
 # fail so tf_data_loader doesn't work atm
 # SubstraFL algo definition
 from tensorflow_algorithms.tf_fed_avg_algo import TFFedAvgAlgo
-from tensorflow_algorithms import TFDatasetFile
-TFDataset = TFDatasetFile.TFDataset
 
 
 class MyAlgo(TFFedAvgAlgo):

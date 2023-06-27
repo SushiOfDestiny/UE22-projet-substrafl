@@ -1,5 +1,6 @@
 import tensorflow as tf
-import TFDatasetFile
+#import TFDatasetFile
+from tensorflow_algorithms import TFDatasetFile
 
 
 def tf_dataloader(dataset, batch_size , shuffle=False) -> tf.data.Dataset:
