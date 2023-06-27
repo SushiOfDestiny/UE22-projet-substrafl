@@ -9,7 +9,7 @@ from typing import Optional
 from typing import Union
 
 import numpy as np
-import tensorflow as tf 
+import tensorflow as tf
 
 from substrafl.algorithms.algo import Algo
 from substrafl.exceptions import BatchSizeNotFoundError
@@ -27,16 +27,17 @@ import cloudpickle
 
 logger = logging.getLogger(__name__)
 
+
 class TFAlgo(Algo):
 
     def __init__(
         self,
-        model: tf.keras.Sequential,
+        model: dict,
         criterion: tf.keras.losses.Loss,
         index_generator: Union[BaseIndexGenerator, None],
         dataset: tf.data.Dataset,
-        optimizer: Optional[tf.keras.optimizers.Optimizer] = None,
-        scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
+        optimizer: Optional[dict] = None,
+        scheduler: Optional[dict] = None,
         seed: Optional[int] = None,
         use_gpu: bool = True,
         *args,
@@ -67,23 +68,79 @@ class TFAlgo(Algo):
             #         except RuntimeError as e:
             #             # Visible devices must be set before GPUs have been initialized
             #             print(e)
+
+        # normally we receive here a dict of compiled model with the right config
         self._model = model
+
         self._optimizer = optimizer
+        assert (self._optimizer is None), "Optimizer is not None"
+        
         self._criterion = criterion
+        
         self._scheduler = scheduler
+        assert (self._scheduler is None), "Scheduler is not None"
 
         self._index_generator = index_generator
         self._dataset: tf.data.Dataset = dataset
         # dataset check overlooked
 
     @property
-    def model(self) -> tf.keras.Sequential:
+    def model(self) -> dict:
         """Model exposed when the user downloads the model
 
         Returns:
-            torch.nn.Module: model
+            dict: model
         """
         return self._model
+
+    # def optimizer_deserialize(self) -> tf.keras.optimizers.Optimizer:
+    #     """deserialize self._optimizer
+    #     optimizer_class=tf.keras.optimizers.Adam(learning_rate=0.001)"""
+
+    #     return tf.keras.optimizers.Adam(learning_rate=0.001).from_config(self._optimizer)
+
+    # def optimizer_serialize(self, optimizer: tf.keras.optimizers.Optimizer) -> None:
+    #     """updates serialized optimizer self._optimizer with the state_dict of optimizer"""
+
+    #     self._optimizer = optimizer.get_config()
+
+
+    def model_deserialize(self) -> tf.keras.Sequential:
+        """deserialize self._model
+        first we try to put model in Sequential eventhough it is a custom CNN
+        
+        Returned model is compiled
+        """
+
+        # model = tf.keras.Sequential()
+        # weight_manager.model_load_state_dict(model, self._model)
+
+        # return model
+
+        new_model = weight_manager.model_load_state_dict(self._model)
+        
+        # # Compiling
+        # new_model.compile(optimizer=self.optimizer_deserialize(), loss=self._criterion)
+
+        return new_model
+
+    def model_serialize(self, model: tf.keras.Sequential) -> None:
+        """updates serialized model self._model with the state_dict (config and weights) of model"""
+
+        self._model = weight_manager.model_state_dict(model)
+
+    
+    # scheduler version in progress
+    # def scheduler_deserialize(self) -> tf.keras.optimizers.schedules.LearningRateSchedule:
+    #     """deserialize self._scheduler
+    #     scheduler_class=tf.keras.schedulers.Adam(learning_rate=0.001)"""
+
+    #     return tf.keras.schedulers.Adam(learning_rate=0.001).from_config(self._scheduler)
+
+    # def scheduler_serialize(self, scheduler: tf.keras.schedulers.scheduler) -> None:
+    #     """updates serialized scheduler self._scheduler with the state_dict of scheduler"""
+
+    #     self._scheduler = scheduler.get_config()
 
     @abc.abstractmethod
     def train(
@@ -93,7 +150,7 @@ class TFAlgo(Algo):
     ) -> Any:
         # Must be implemented in the child class
         raise NotImplementedError()
-    
+
     @remote_data
     def predict(self, datasamples: Any, shared_state: Any = None, predictions_path: os.PathLike = None) -> Any:
         """Execute the following operations:
@@ -109,8 +166,9 @@ class TFAlgo(Algo):
 
         # Create tf dataset
         predict_dataset = self._dataset(datasamples, is_inference=True)
-        self._local_predict(predict_dataset=predict_dataset, predictions_path=predictions_path)
-    
+        self._local_predict(predict_dataset=predict_dataset,
+                            predictions_path=predictions_path)
+
     def _save_predictions(self, predictions: tf.Tensor, predictions_path: os.PathLike):
         """Save the predictions under the numpy format.
 
@@ -122,7 +180,7 @@ class TFAlgo(Algo):
             np.save(predictions_path, predictions)
             # Create a folder ??
             shutil.move(str(predictions_path) + ".npy", predictions_path)
-    
+
     def _local_predict(self, predict_dataset: tf.data.Dataset, predictions_path):
         """Execute the following operations:
 
@@ -159,69 +217,109 @@ class TFAlgo(Algo):
         inference_mode = tf.Variable(True, trainable=False)
 
         predictions = tf.constant([])
+
+        # Deserialization and compiling
+        model = self.model_deserialize()
+
         if inference_mode:
             # Code specific to the inference mode
             # with tf.device(self._device):
             for x in predict_loader:
-                predictions = tf.concat([predictions, self._model(x)], 0)
+                predictions = tf.concat([predictions, model(x)], 0)
 
         # with tf.device('CPU:0'):
         # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
         predictions = tf.identity(predictions)
         self._save_predictions(predictions, predictions_path)
 
+        # Reserialization, eventhough the model has not theoretically changed
+        self.model_serialize(model)
+
     def _local_train(
-            self,
-            train_dataset: tf.data.Dataset,
-        ):
-            """Local train method. Contains the local training loop.
+        self,
+        train_dataset: tf.data.Dataset,
+    ):
+        """Local train method. Contains the local training loop.
 
-            Train the model on ``num_updates`` minibatches, using the ``self._index_generator generator`` as batch sampler
-            for the tf dataset.
+        Train the model on ``num_updates`` minibatches, using the ``self._index_generator generator`` as batch sampler
+        for the tf dataset.
 
-            Args:
-                train_dataset (TFDataset / tf.data.Dataset): train_dataset build from the x and y returned by the opener.
+        Args:
+            train_dataset (TFDataset / tf.data.Dataset): train_dataset build from the x and y returned by the opener.
 
-            Important:
+        Important:
 
-                You must use ``next(self._index_generator)`` as batch sampler,
-                to ensure that the batches you are using are correct between 2 rounds
-                of the federated learning strategy.
-            """
-            if self._optimizer is None:
-                raise OptimizerValueError(
-                    "No optimizer found. Either give one or overwrite the _local_train method from the used torch"
-                    "algorithm."
-                )
+            You must use ``next(self._index_generator)`` as batch sampler,
+            to ensure that the batches you are using are correct between 2 rounds
+            of the federated learning strategy.
+        """
 
-            # Create tf dataloader
-            # train_data_loader = tf_dataloader(train_dataset, batch_sampler=self._index_generator) # reminder: class(train_dataset) = TFDataset / tf.data.Dataset
-            # avoiding the loader probleme
-            train_data_loader = train_dataset
+        # # Train mode for tensorflow model
 
-            # Changing device
-            # with tf.device(self._device):
-            for x_batch, y_batch in train_data_loader:
-                
-                # x_batch = x_batch.to(self._device)
-                # y_batch = y_batch.to(self._device)
+        # # Deserialization and compiling
+        # model = self.model_deserialize()
 
-                # cf https://www.tensorflow.org/overview?hl=fr "For experts"
-                # Forward pass
-                y_pred = self._model(x_batch, training=True)
+        # model.train()
 
-                # Compute loss
-                loss = self._criterion(y_batch, y_pred)
+        # if self._optimizer is None:
+        #     raise OptimizerValueError(
+        #         "No optimizer found. Either give one or overwrite the _local_train method from the used torch"
+        #         "algorithm."
+        #     )
+        # else:
+        #     # Deserialization
+        #     optimizer = self.optimizer_deserialize()
 
-                # Calculate gradients
-                grads = tf.GradientTape.gradient(loss, self._model.trainable_variables)
+        # # Create tf dataloader
+        # # train_data_loader = tf_dataloader(train_dataset, batch_sampler=self._index_generator) # reminder: class(train_dataset) = TFDataset / tf.data.Dataset
+        # # avoiding the loader probleme
+        # train_data_loader = train_dataset
 
-                # Apply gradients
-                self._optimizer.apply_gradients(zip(grads, self._model.trainable_variables))
+        # # Changing device
+        # # with tf.device(self._device):
+        # for x_batch, y_batch in train_data_loader:
 
-                if self._scheduler is not None:
-                    self._scheduler.step()
+        #     # x_batch = x_batch.to(self._device)
+        #     # y_batch = y_batch.to(self._device)
 
+        #     # cf https://www.tensorflow.org/overview?hl=fr "For experts"
+        #     # Forward pass
+        #     y_pred = model(x_batch, training=True)
+
+        #     # Compute loss
+        #     loss = self._criterion(y_batch, y_pred)
+
+        #     # Calculate gradients
+        #     grads = tf.GradientTape.gradient(loss, model.trainable_variables)
+
+        #     # Apply gradients
+        #     optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
+        #     if self._scheduler is not None:
+        #         self._scheduler.step()
+
+        # # Equivalent of self._model.eval() : desactivate the variables not used for prediction
+        # tf.keras.backend.set_learning_phase(0)
+
+        ###########################
+        # Simplified training phase
+
+        # Deserialization and compiling w/ optimizer and loss
+        model = self.model_deserialize()
+
+        # Create tf dataloader
+        # train_data_loader = tf_dataloader(train_dataset, batch_sampler=self._index_generator) # reminder: class(train_dataset) = TFDataset / tf.data.Dataset
+        # avoiding the loader probleme
+        train_data_loader = train_dataset
+
+        # We assume with the previous version, we can do the following
+        model.fit(x=train_data_loader.x, y=train_data_loader.y, batch_size=32, epochs=1)
+
+        
+        # Reserialization
+        # self._optimizer = model.get_compile_config()['optimizer']
+        self.model_serialize(model)
+        
 
     def _update_from_checkpoint(self, path: Path) -> dict:
         """Load the checkpoint and update the internal state
@@ -244,20 +342,20 @@ class TFAlgo(Algo):
                     self._strategy_specific_variable = checkpoint.pop("strategy_specific_variable")
                     return checkpoint
         """
-        assert path.is_file(), f'Cannot load the model - does not exist {list(path.parent.glob("*"))}'
-        
+        assert path.is_file(
+        ), f'Cannot load the model - does not exist {list(path.parent.glob("*"))}'
+
         # we ignore the map_location arg
         with open(path, "rb") as f:
             checkpoint = cloudpickle.load(f)
-        
-        weight_manager.model_load_state_dict(self._model, checkpoint.pop("model_state_dict"))
+
+        self._model = checkpoint.pop("model_state_dict")
 
         if self._optimizer is not None:
-            self._optimizer.from_config(checkpoint.pop("optimizer_state_dict"))
+            self._optimizer = checkpoint.pop("optimizer_state_dict")
 
         if self._scheduler is not None:
             self._scheduler.from_config(checkpoint.pop("scheduler_state_dict"))
-
 
         self._index_generator = checkpoint.pop("index_generator")
 
@@ -267,8 +365,9 @@ class TFAlgo(Algo):
         # else:
         #     torch.cuda.set_rng_state(checkpoint.pop("rng_state").to("cpu"))
 
+        # at this point checkpoint should be empty
         return checkpoint
-    
+
     def load(self, path: Path) -> "TFAlgo":
         """Load the stateful arguments of this class.
         Child classes do not need to override that function.
@@ -280,9 +379,10 @@ class TFAlgo(Algo):
             TorchAlgo: The class with the loaded elements.
         """
         checkpoint = self._update_from_checkpoint(path=path)
-        assert len(checkpoint) == 0, f"Not all values from the checkpoint have been used: {checkpoint.keys()}"
+        assert len(
+            checkpoint) == 0, f"Not all values from the checkpoint have been used: {checkpoint.keys()}"
         return self
-    
+
     def _get_state_to_save(self) -> dict:
         """Create the algo checkpoint: a dictionary
         saved with tf ???.
@@ -304,18 +404,18 @@ class TFAlgo(Algo):
             dict: checkpoint to save
         """
         checkpoint = {
-            "model_state_dict": weight_manager.model_state_dict(self._model),
+            "model_state_dict": self._model,
             "index_generator": self._index_generator,
         }
         if self._optimizer is not None:
             # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
-            checkpoint["optimizer_state_dict"] = self._optimizer.get_config()
+            checkpoint["optimizer_state_dict"] = self._optimizer
         if self._scheduler is not None:
             # for an tf.optimizers.Optimizer, we use .get_config() and .from_config()
             checkpoint["scheduler_state_dict"] = self._scheduler.get_config()
 
         return checkpoint
-    
+
     def _check_tf_dataset(self):
         # Check that the given Dataset is not an instance
         try:
@@ -340,7 +440,7 @@ class TFAlgo(Algo):
             raise DatasetSignatureError(
                 "The __init__() function of the tf Dataset must contain is_inference as parameter."
             )
-        
+
     def save(self, path: Path):
         """Saves all the stateful elements of the class to the specified path.
         Child classes do not need to override that function.
@@ -348,14 +448,15 @@ class TFAlgo(Algo):
         Args:
             path (pathlib.Path): A path where to save the class.
         """
-        
-        # tf functions to save and load objects are quite different than torch's, we firstly try to imitate the latter 
+
+        # tf functions to save and load objects are quite different than torch's, we firstly try to imitate the latter
         # with the pickle module
         with open(path, "wb") as f:
             cloudpickle.dump(self._get_state_to_save(), f)
 
-        assert path.is_file(), f'Did not save the model properly {list(path.parent.glob("*"))}'
-    
+        assert path.is_file(
+        ), f'Did not save the model properly {list(path.parent.glob("*"))}'
+
     def summary(self):
         """Summary of the class to be exposed in the experiment summary file.
         Implement this function in the child class to add strategy-specific variables. The variables
@@ -383,11 +484,10 @@ class TFAlgo(Algo):
                 "optimizer": None
                 if self._optimizer is None
                 else {
-                    "type": str(type(self._optimizer)),
-                    "parameters": self._optimizer.get_config(),
+                    "type": "not visible yet",
+                    # "parameters": self._optimizer,
                 },
-                "scheduler": None if self._scheduler is None else str(type(self._scheduler)),
+                "scheduler": None if self._scheduler is None else "not visible yet",
             }
         )
         return summary
-
