@@ -69,7 +69,9 @@ class TFAlgo(Algo):
             #             # Visible devices must be set before GPUs have been initialized
             #             print(e)
 
+        # normally we receive here a compiled model with the right config
         self._model = model
+
         self._optimizer = optimizer
         self._criterion = criterion
         self._scheduler = scheduler
