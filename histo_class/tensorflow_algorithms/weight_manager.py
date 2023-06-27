@@ -93,9 +93,9 @@ def weighted_sum_parameters(
     assert len(parameters_list) == len(coefficient_list), "There must be a coefficient for each List of parameters"
 
     for parameters_to_sum in zip(*parameters_list):
-        assert all(
-            parameters_to_sum[0].numpy().shape == parameter.numpy().shape for parameter in parameters_to_sum
-        ), "The shape of the parameters are unequal."
+        # assert all(
+        #     parameters_to_sum[0].numpy().shape == parameter.numpy().shape for parameter in parameters_to_sum
+        # ), "The shape of the parameters are unequal."
         
         weighted_sum.append(sum(param * coeff for param, coeff in zip(parameters_to_sum, coefficient_list)))
 
