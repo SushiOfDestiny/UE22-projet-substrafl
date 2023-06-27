@@ -73,8 +73,12 @@ class TFAlgo(Algo):
         self._model = model
 
         self._optimizer = optimizer
+        assert (self._optimizer is None), "Optimizer is not None"
+        
         self._criterion = criterion
+        
         self._scheduler = scheduler
+        assert (self._scheduler is None), "Scheduler is not None"
 
         self._index_generator = index_generator
         self._dataset: tf.data.Dataset = dataset
@@ -89,16 +93,16 @@ class TFAlgo(Algo):
         """
         return self._model
 
-    def optimizer_deserialize(self) -> tf.keras.optimizers.Optimizer:
-        """deserialize self._optimizer
-        optimizer_class=tf.keras.optimizers.Adam(learning_rate=0.001)"""
+    # def optimizer_deserialize(self) -> tf.keras.optimizers.Optimizer:
+    #     """deserialize self._optimizer
+    #     optimizer_class=tf.keras.optimizers.Adam(learning_rate=0.001)"""
 
-        return tf.keras.optimizers.Adam(learning_rate=0.001).from_config(self._optimizer)
+    #     return tf.keras.optimizers.Adam(learning_rate=0.001).from_config(self._optimizer)
 
-    def optimizer_serialize(self, optimizer: tf.keras.optimizers.Optimizer) -> None:
-        """updates serialized optimizer self._optimizer with the state_dict of optimizer"""
+    # def optimizer_serialize(self, optimizer: tf.keras.optimizers.Optimizer) -> None:
+    #     """updates serialized optimizer self._optimizer with the state_dict of optimizer"""
 
-        self._optimizer = optimizer.get_config()
+    #     self._optimizer = optimizer.get_config()
 
 
     def model_deserialize(self) -> tf.keras.Sequential:
@@ -115,8 +119,8 @@ class TFAlgo(Algo):
 
         new_model = weight_manager.model_load_state_dict(self._model)
         
-        # Compiling
-        new_model.compile(optimizer=self.optimizer_deserialize(), loss=self._criterion)
+        # # Compiling
+        # new_model.compile(optimizer=self.optimizer_deserialize(), loss=self._criterion)
 
         return new_model
 
@@ -250,55 +254,74 @@ class TFAlgo(Algo):
             of the federated learning strategy.
         """
 
-        # Deserialization and compiling
+        # # Train mode for tensorflow model
+
+        # # Deserialization and compiling
+        # model = self.model_deserialize()
+
+        # model.train()
+
+        # if self._optimizer is None:
+        #     raise OptimizerValueError(
+        #         "No optimizer found. Either give one or overwrite the _local_train method from the used torch"
+        #         "algorithm."
+        #     )
+        # else:
+        #     # Deserialization
+        #     optimizer = self.optimizer_deserialize()
+
+        # # Create tf dataloader
+        # # train_data_loader = tf_dataloader(train_dataset, batch_sampler=self._index_generator) # reminder: class(train_dataset) = TFDataset / tf.data.Dataset
+        # # avoiding the loader probleme
+        # train_data_loader = train_dataset
+
+        # # Changing device
+        # # with tf.device(self._device):
+        # for x_batch, y_batch in train_data_loader:
+
+        #     # x_batch = x_batch.to(self._device)
+        #     # y_batch = y_batch.to(self._device)
+
+        #     # cf https://www.tensorflow.org/overview?hl=fr "For experts"
+        #     # Forward pass
+        #     y_pred = model(x_batch, training=True)
+
+        #     # Compute loss
+        #     loss = self._criterion(y_batch, y_pred)
+
+        #     # Calculate gradients
+        #     grads = tf.GradientTape.gradient(loss, model.trainable_variables)
+
+        #     # Apply gradients
+        #     optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
+        #     if self._scheduler is not None:
+        #         self._scheduler.step()
+
+        # # Equivalent of self._model.eval() : desactivate the variables not used for prediction
+        # tf.keras.backend.set_learning_phase(0)
+
+        ###########################
+        # Simplified training phase
+
+        # Deserialization and compiling w/ optimizer and loss
         model = self.model_deserialize()
-
-        # Train mode for tensorflow model
-        model.train()
-
-        if self._optimizer is None:
-            raise OptimizerValueError(
-                "No optimizer found. Either give one or overwrite the _local_train method from the used torch"
-                "algorithm."
-            )
-        else:
-            # Deserialization
-            optimizer = self.optimizer_deserialize()
 
         # Create tf dataloader
         # train_data_loader = tf_dataloader(train_dataset, batch_sampler=self._index_generator) # reminder: class(train_dataset) = TFDataset / tf.data.Dataset
         # avoiding the loader probleme
         train_data_loader = train_dataset
 
-        # Changing device
-        # with tf.device(self._device):
-        for x_batch, y_batch in train_data_loader:
+        # We assume with the previous version, we can do the following
+        x_batches, y_batches = zip(train_data_loader)
 
-            # x_batch = x_batch.to(self._device)
-            # y_batch = y_batch.to(self._device)
+        model.fit(x=x_batches, y=y_batches, batch_size=32, epochs=1)
 
-            # cf https://www.tensorflow.org/overview?hl=fr "For experts"
-            # Forward pass
-            y_pred = model(x_batch, training=True)
-
-            # Compute loss
-            loss = self._criterion(y_batch, y_pred)
-
-            # Calculate gradients
-            grads = tf.GradientTape.gradient(loss, model.trainable_variables)
-
-            # Apply gradients
-            optimizer.apply_gradients(zip(grads, model.trainable_variables))
-
-            if self._scheduler is not None:
-                self._scheduler.step()
-
-        # Equivalent of self._model.eval() : desactivate the variables not used for prediction
-        tf.keras.backend.set_learning_phase(0)
         
         # Reserialization
+        # self._optimizer = model.get_compile_config()['optimizer']
         self.model_serialize(model)
-        self.optimizer_serialize(optimizer)
+        
 
     def _update_from_checkpoint(self, path: Path) -> dict:
         """Load the checkpoint and update the internal state
@@ -344,6 +367,7 @@ class TFAlgo(Algo):
         # else:
         #     torch.cuda.set_rng_state(checkpoint.pop("rng_state").to("cpu"))
 
+        # at this point checkpoint should be empty
         return checkpoint
 
     def load(self, path: Path) -> "TFAlgo":

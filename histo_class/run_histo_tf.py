@@ -224,7 +224,7 @@ model.compile(optimizer=optimizer, loss=criterion)
 # SERIALIZING   
 # with dict
 model_state_dict = weight_manager.model_state_dict(model)
-optimizer_state_dict = optimizer.get_config()
+# optimizer_state_dict = optimizer.get_config()
 
 
 # Specifying on how much data to train
@@ -350,7 +350,7 @@ class MyAlgo(TFFedAvgAlgo):
         super().__init__(
             model=model_state_dict,
             criterion=criterion,
-            optimizer=optimizer_state_dict,
+            optimizer=None,
             index_generator=index_generator,
             dataset=TFDataset,
             seed=seed,
