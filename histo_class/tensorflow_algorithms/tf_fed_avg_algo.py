@@ -148,12 +148,16 @@ class TFFedAvgAlgo(TFAlgo):
                 # parameter_updates = [tf.convert_to_tensor(x) for x in shared_state.avg_parameters_update]
             parameter_updates = [tf.Variable(initial_value=x, dtype='float64') for x in shared_state.avg_parameters_update]
             
+            # A simpler version of following code is possible
+            # Deserializing and compiling
             model=self.model_deserialize()
 
             weight_manager.increment_parameters(
                 model=model,
                 updates=parameter_updates,
             )
+
+            # Reserializing
             self.model_serialize(model)
 
         self._index_generator.reset_counter()

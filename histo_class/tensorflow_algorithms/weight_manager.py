@@ -142,7 +142,7 @@ def zeros_like_parameters(
 #         )
 
 def model_state_dict(model) -> OrderedDict:
-    """Create a dict with the configuration (structure) and the parameters (weights and bias) of the model"""
+    """Create a dict with the configuration (layers' structure) and the parameters (weights and bias) of the model"""
     s_dict = OrderedDict({})
     s_dict['config'] = model.get_config()
     s_dict['weights'] = model.get_weights()
@@ -158,7 +158,8 @@ def model_state_dict(model) -> OrderedDict:
 # we have to create a new one directly with the right structure
 
 def model_load_state_dict(s_dict) -> tf.keras.Sequential:
-    """load the state dict into model"""
+    """load the state dict into model
+    Returned model has to be compiled"""
     new_model = tf.keras.Sequential().from_config(s_dict['config'])
     new_model.set_weights(s_dict['weights'])
     return new_model

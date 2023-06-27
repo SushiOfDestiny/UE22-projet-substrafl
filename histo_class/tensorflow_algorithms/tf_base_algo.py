@@ -69,7 +69,7 @@ class TFAlgo(Algo):
             #             # Visible devices must be set before GPUs have been initialized
             #             print(e)
 
-        # normally we receive here a compiled model with the right config
+        # normally we receive here a dict of compiled model with the right config
         self._model = model
 
         self._optimizer = optimizer
@@ -89,23 +89,6 @@ class TFAlgo(Algo):
         """
         return self._model
 
-    def model_deserialize(self) -> tf.keras.Sequential:
-        """deserialize self._model
-        first we try to put model in Sequential eventhough it is a custom CNN
-        """
-
-        # model = tf.keras.Sequential()
-        # weight_manager.model_load_state_dict(model, self._model)
-
-        # return model
-
-        return weight_manager.model_load_state_dict(self._model)
-
-    def model_serialize(self, model: tf.keras.Sequential) -> None:
-        """updates serialized model self._model with the state_dict (config and weights) of model"""
-
-        self._model = weight_manager.model_state_dict(model)
-
     def optimizer_deserialize(self) -> tf.keras.optimizers.Optimizer:
         """deserialize self._optimizer
         optimizer_class=tf.keras.optimizers.Adam(learning_rate=0.001)"""
@@ -116,6 +99,32 @@ class TFAlgo(Algo):
         """updates serialized optimizer self._optimizer with the state_dict of optimizer"""
 
         self._optimizer = optimizer.get_config()
+
+
+    def model_deserialize(self) -> tf.keras.Sequential:
+        """deserialize self._model
+        first we try to put model in Sequential eventhough it is a custom CNN
+        
+        Returned model is compiled
+        """
+
+        # model = tf.keras.Sequential()
+        # weight_manager.model_load_state_dict(model, self._model)
+
+        # return model
+
+        new_model = weight_manager.model_load_state_dict(self._model)
+        
+        # Compiling
+        new_model.compile(optimizer=self.optimizer_deserialize(), loss=self._criterion)
+
+        return new_model
+
+    def model_serialize(self, model: tf.keras.Sequential) -> None:
+        """updates serialized model self._model with the state_dict (config and weights) of model"""
+
+        self._model = weight_manager.model_state_dict(model)
+
     
     # scheduler version in progress
     # def scheduler_deserialize(self) -> tf.keras.optimizers.schedules.LearningRateSchedule:
@@ -205,7 +214,7 @@ class TFAlgo(Algo):
 
         predictions = tf.constant([])
 
-        # Deserialization
+        # Deserialization and compiling
         model = self.model_deserialize()
 
         if inference_mode:
@@ -219,7 +228,7 @@ class TFAlgo(Algo):
         predictions = tf.identity(predictions)
         self._save_predictions(predictions, predictions_path)
 
-        # Reserialization
+        # Reserialization, eventhough the model has not theoretically changed
         self.model_serialize(model)
 
     def _local_train(
@@ -241,11 +250,11 @@ class TFAlgo(Algo):
             of the federated learning strategy.
         """
 
-        # Deserialization
+        # Deserialization and compiling
         model = self.model_deserialize()
 
         # Train mode for tensorflow model
-        self._model.train()
+        model.train()
 
         if self._optimizer is None:
             raise OptimizerValueError(
