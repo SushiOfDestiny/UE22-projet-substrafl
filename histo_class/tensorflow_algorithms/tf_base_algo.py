@@ -204,14 +204,16 @@ class TFAlgo(Algo):
             BatchSizeNotFoundError: No default batch size have been found to perform local prediction.
                 Please overwrite the predict function of your algorithm.
         """
-        if self._index_generator is not None:
-            # predict_loader = tf_dataloader(predict_dataset, batch_size=self._index_generator.batch_size)
-            predict_loader = predict_dataset
-        else:
-            raise BatchSizeNotFoundError(
-                "No default batch size has been found to perform local prediction. "
-                "Please overwrite the _local_predict function of your algorithm."
-            )
+        # if self._index_generator is not None:
+        #     # predict_loader = tf_dataloader(predict_dataset, batch_size=self._index_generator.batch_size)
+        #     predict_loader = predict_dataset
+        # else:
+        #     raise BatchSizeNotFoundError(
+        #         "No default batch size has been found to perform local prediction. "
+        #         "Please overwrite the _local_predict function of your algorithm."
+        #     )
+
+        predict_loader = predict_dataset
 
         # Equivalent of self._model.eval() : desactivate the variables not used for prediction
         tf.keras.backend.set_learning_phase(0)
