@@ -92,9 +92,12 @@ class TFAlgo(Algo):
         first we try to put model in Sequential eventhough it is a custom CNN
         """
 
-        model = tf.keras.Sequential()
-        weight_manager.model_load_state_dict(model, self._model)
-        return model
+        # model = tf.keras.Sequential()
+        # weight_manager.model_load_state_dict(model, self._model)
+
+        # return model
+
+        return weight_manager.model_load_state_dict(self._model)
 
     def model_serialize(self, model: tf.keras.Sequential) -> None:
         """updates serialized model self._model with the state_dict (config and weights) of model"""

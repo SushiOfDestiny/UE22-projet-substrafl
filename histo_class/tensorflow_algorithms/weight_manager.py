@@ -149,7 +149,16 @@ def model_state_dict(model) -> OrderedDict:
 
     return s_dict     
 
-def model_load_state_dict(model, s_dict):
+# def model_load_state_dict(model, s_dict):
+#     """load the state dict into model"""
+#     model.from_config(s_dict['config'])
+#     model.set_weights(s_dict['weights'])
+
+# does not work because we can't change the config/structure of an existing model, 
+# we have to create a new one directly with the right structure
+
+def model_load_state_dict(s_dict) -> tf.keras.Sequential:
     """load the state dict into model"""
-    model.from_config(s_dict['config'])
-    model.set_weights(s_dict['weights'])
+    new_model = tf.keras.Sequential().from_config(s_dict['config'])
+    new_model.set_weights(s_dict['weights'])
+    return new_model
