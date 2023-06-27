@@ -313,9 +313,7 @@ class TFAlgo(Algo):
         train_data_loader = train_dataset
 
         # We assume with the previous version, we can do the following
-        x_batches, y_batches = zip(train_data_loader)
-
-        model.fit(x=x_batches, y=y_batches, batch_size=32, epochs=1)
+        model.fit(x=train_data_loader.x, y=train_data_loader.y, batch_size=32, epochs=1)
 
         
         # Reserialization
