@@ -5,7 +5,7 @@ from tensorflow_algorithms import TFDatasetFile
 
 def tf_dataloader(dataset, batch_size , shuffle=False) -> tf.data.Dataset:
     #Create a dataset divided in batchs 
-    if isinstance(dataset,my_classes.TFDataset) :
+    if isinstance(dataset,TFDatasetFile.TFDataset) :
 
         def sequential_access_dataset():
             for idx in range(len(dataset)):
