@@ -312,7 +312,7 @@ class TFDataset(tf.data.Dataset):
 
         else:
             x = tf.convert_to_tensor(value=self.x[idx][None, ...], dtype='float64')
-            y = self.one_hots[self.y[idx]]
+            y = self.one_hots[self.y[idx]] # logit form
             return x, y
 
     def __len__(self):

@@ -23,10 +23,10 @@ def setup_histo(data_path, N_CLIENTS):
     test_labels_ds = test_ds.map(lambda x,y: y)
 
     # converting datasets into numpy arrays of shapes (nb_img, 150, 150, 3) and (nb_labels, )
-    train_images = np.array(list(train_images_ds.as_numpy_iterator()))
-    train_labels = np.array(list(train_labels_ds.as_numpy_iterator()))
-    test_images = np.array(list(test_images_ds.as_numpy_iterator()))
-    test_labels = np.array(list(test_labels_ds.as_numpy_iterator()))
+    train_images = np.array(list(train_images_ds.as_numpy_iterator()))[:100]
+    train_labels = np.array(list(train_labels_ds.as_numpy_iterator()))[:100]
+    test_images = np.array(list(test_images_ds.as_numpy_iterator()))[:100]
+    test_labels = np.array(list(test_labels_ds.as_numpy_iterator()))[:100]
 
     # Split array into the number of organization
     train_images_folds = np.split(train_images, N_CLIENTS)

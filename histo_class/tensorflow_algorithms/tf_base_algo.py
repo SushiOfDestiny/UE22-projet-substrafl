@@ -213,14 +213,14 @@ class TFAlgo(Algo):
         #         "Please overwrite the _local_predict function of your algorithm."
         #     )
 
-        predict_loader = predict_dataset
+        # predict_loader = predict_dataset
 
         # Equivalent of self._model.eval() : desactivate the variables not used for prediction
         tf.keras.backend.set_learning_phase(0)
         # Variable controlling the inference mode
         inference_mode = tf.Variable(True, trainable=False)
 
-        predictions = tf.constant([])
+        predictions = tf.constant([]) # 
 
         # Deserialization and compiling
         model = self.model_deserialize()
@@ -228,8 +228,18 @@ class TFAlgo(Algo):
         if inference_mode:
             # Code specific to the inference mode
             # with tf.device(self._device):
-            for x in predict_loader:
-                predictions = tf.concat([predictions, model(x)], 0)
+            # for x in predict_dataset.x[None, ...]: # taking np.array and adding a dimension
+            #     # import ipdb
+            #     # ipdb.set_trace()
+            #     predictions = tf.concat([predictions, model(x)], 0)
+
+            for i in range(len(predict_dataset)):
+                x = predict_dataset[i]
+                y_logit = model(x)
+                y = tf.convert_to_tensor(value=np.argmax(y_logit))
+                predictions = tf.concat([predictions, y], 0)
+                # predictions = tf.stack([predictions, y], 0)
+
 
         # with tf.device('CPU:0'):
         # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
