@@ -161,11 +161,11 @@ metric_deps = Dependency(pypi_dependencies=["numpy==1.23.1", "scikit-learn==1.1.
 
 
 def accuracy(datasamples, predictions_path):
-    y_true = datasamples["labels"]
-    y_pred = np.load(predictions_path)
+    y_true = datasamples["labels"] # labels from a batch
+    y_pred = np.load(predictions_path) # predictions from a batch, as logits 
 
-    # return accuracy_score(y_true, np.argmax(y_pred, axis=1))
-    return accuracy_score(y_true, y_pred)
+    return accuracy_score(y_true, np.argmax(y_pred, axis=1))
+    # return accuracy_score(y_true, y_pred)
 
 
 metric_key = add_metric(
@@ -214,7 +214,7 @@ model = CNN()
 
 optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 
-criterion = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
+criterion = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # softmax return distribution of probability
 
 # Add model compiling
 model.compile(optimizer=optimizer, loss=criterion)
@@ -295,7 +295,7 @@ class TFDataset(tf.data.Dataset):
         self.y = datasamples["labels"]
         self.is_inference = is_inference
         self.nb_classes = 8 # labels go from 0 to 7
-        self.one_hots = tf.one_hot(indices=list(range(self.nb_classes)), depth=self.nb_classes, dtype='float32')
+        # self.one_hots = tf.one_hot(indices=list(range(self.nb_classes)), depth=self.nb_classes, dtype='float32')
         # =
         # [[1., 0., 0., 0., 0., 0., 0., 0.],
         #  [0., 1., 0., 0., 0., 0., 0., 0.],
@@ -308,11 +308,11 @@ class TFDataset(tf.data.Dataset):
     def __getitem__(self, idx):
 
         if self.is_inference:
-            x = tf.convert_to_tensor(value=self.x[idx][None, ...], dtype='float64') # keep float64
+            x = tf.convert_to_tensor(value=self.x[idx][None, ...], dtype='float32') # keep float32
             return x
 
         else:
-            x = tf.convert_to_tensor(value=self.x[idx][None, ...], dtype='float64')
+            x = tf.convert_to_tensor(value=self.x[idx][None, ...], dtype='float32')
             # y = self.one_hots[self.y[idx]] # logit form
             y = self.y[idx] # label form
             return x, y
@@ -328,14 +328,14 @@ class TFDataset(tf.data.Dataset):
         if self.is_inference:
             return []
         else:
-            return tf.TensorSpec(shape=self.input_shape, dtype=tf.float64), tf.TensorSpec(shape=(self.nb_classes,), dtype=tf.float32)
+            return tf.TensorSpec(shape=self.input_shape, dtype=tf.float32), tf.TensorSpec(shape=(self.nb_classes,), dtype=tf.float32)
 
     def element_spec(self):
         """The type specification of an element of this dataset."""
         if self.is_inference:
-            return tf.TensorSpec(shape=self.input_shape, dtype=tf.float64)
+            return tf.TensorSpec(shape=self.input_shape, dtype=tf.float32)
         else:
-            return tf.TensorSpec(shape=self.input_shape, dtype=tf.float64), tf.TensorSpec(shape=(self.nb_classes,), dtype=tf.float32)
+            return tf.TensorSpec(shape=self.input_shape, dtype=tf.float32), tf.TensorSpec(shape=(self.nb_classes,), dtype=tf.float32)
 # to test the previous class, we recreate a data_sample
 # we assume a datasample is like
 # dict('images': np.array,

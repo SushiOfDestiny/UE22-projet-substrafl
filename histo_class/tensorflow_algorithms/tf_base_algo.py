@@ -237,7 +237,7 @@ class TFAlgo(Algo):
             for i in range(len(predict_dataset)):
                 x = predict_dataset[i]
                 # y_logit = model(x)
-                y = model(x)[0]
+                y = model(x)[0]# is a logit
                 # y = tf.convert_to_tensor(value=np.argmax(y_logit))
                 # predictions = tf.concat([predictions, y], 0)
                 # predictions = tf.stack([predictions, y], 0)

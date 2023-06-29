@@ -149,7 +149,7 @@ class TFFedAvgAlgo(TFAlgo):
             # Hence we need to add it to the previous local state parameters
             # with tf.device(self._device):
                 # parameter_updates = [tf.convert_to_tensor(x) for x in shared_state.avg_parameters_update]
-            parameter_updates = [tf.Variable(initial_value=x, dtype='float64') for x in shared_state.avg_parameters_update]
+            parameter_updates = [tf.Variable(initial_value=x, dtype='float32') for x in shared_state.avg_parameters_update]
             
             # A simpler version of following code is possible because increment_parameter 
             # needs the object model, but its weights are enough

@@ -128,7 +128,7 @@ def zeros_like_parameters(
 #     s_dict = OrderedDict({})
 #     for layer in model.layers:
 #         layer_weights, layer_bias = layer.get_weights()
-#         layer_weights, layer_bias = tf.Variable(layer_weights,dtype='float64'), tf.Variable(layer_bias,dtype='float64')
+#         layer_weights, layer_bias = tf.Variable(layer_weights,dtype='float32'), tf.Variable(layer_bias,dtype='float32')
 #         s_dict[f'{layer.name}.weight'] = layer_weights
 #         s_dict[f'{layer.name}.bias'] = layer_bias
 
