@@ -164,7 +164,8 @@ def accuracy(datasamples, predictions_path):
     y_true = datasamples["labels"]
     y_pred = np.load(predictions_path)
 
-    return accuracy_score(y_true, np.argmax(y_pred, axis=1))
+    # return accuracy_score(y_true, np.argmax(y_pred, axis=1))
+    return accuracy_score(y_true, y_pred)
 
 
 metric_key = add_metric(
@@ -312,7 +313,8 @@ class TFDataset(tf.data.Dataset):
 
         else:
             x = tf.convert_to_tensor(value=self.x[idx][None, ...], dtype='float64')
-            y = self.one_hots[self.y[idx]] # logit form
+            # y = self.one_hots[self.y[idx]] # logit form
+            y = self.y[idx] # label form
             return x, y
 
     def __len__(self):
