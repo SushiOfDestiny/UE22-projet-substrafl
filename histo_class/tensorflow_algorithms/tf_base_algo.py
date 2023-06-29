@@ -216,7 +216,7 @@ class TFAlgo(Algo):
         # predict_loader = predict_dataset
 
         # Equivalent of self._model.eval() : desactivate the variables not used for prediction
-        tf.keras.backend.set_learning_phase(0)
+        # tf.keras.backend.set_learning_phase(0)
         # Variable controlling the inference mode
         inference_mode = tf.Variable(True, trainable=False)
 
