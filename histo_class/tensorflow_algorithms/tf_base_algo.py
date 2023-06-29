@@ -220,7 +220,8 @@ class TFAlgo(Algo):
         # Variable controlling the inference mode
         inference_mode = tf.Variable(True, trainable=False)
 
-        predictions = tf.constant([]) # 
+        # predictions = tf.constant([]) # 
+        predictions = []
 
         # Deserialization and compiling
         model = self.model_deserialize()
@@ -235,10 +236,14 @@ class TFAlgo(Algo):
 
             for i in range(len(predict_dataset)):
                 x = predict_dataset[i]
-                y_logit = model(x)
-                y = tf.convert_to_tensor(value=np.argmax(y_logit))
-                predictions = tf.concat([predictions, y], 0)
+                # y_logit = model(x)
+                y = model(x)[0]
+                # y = tf.convert_to_tensor(value=np.argmax(y_logit))
+                # predictions = tf.concat([predictions, y], 0)
                 # predictions = tf.stack([predictions, y], 0)
+                predictions.append(y)
+            
+            predictions = tf.convert_to_tensor(value=predictions)
 
 
         # with tf.device('CPU:0'):
