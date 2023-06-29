@@ -432,3 +432,29 @@ compute_plan = execute_experiment(
     experiment_folder=str(pathlib.Path.cwd() / "tmp" / "experiment_summaries"),
     dependencies=algo_deps,
 )
+
+
+# List results
+
+import pandas as pd
+
+performances_df = pd.DataFrame(client.get_performances(compute_plan.key).dict())
+print("\nPerformance Table: \n")
+print(performances_df[["worker", "round_idx", "performance"]])
+
+
+
+# Plot results 
+
+import matplotlib.pyplot as plt
+
+plt.title("Test dataset results")
+plt.xlabel("Rounds")
+plt.ylabel("Accuracy")
+
+for id in DATA_PROVIDER_ORGS_ID:
+    df = performances_df.query(f"worker == '{id}'")
+    plt.plot(df["round_idx"], df["performance"], label=id)
+
+plt.legend(loc="lower right")
+plt.show()
