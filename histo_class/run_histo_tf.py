@@ -198,16 +198,24 @@ tf.random.set_seed(seed)
 class CNN(tf.keras.Sequential):
     def __init__(self):
         super(CNN, self).__init__(layers=[
+            # https://medium.com/@ashraf.dasa/tensorflow-image-classification-of-colorectal-cancer-histology-92-5-accuracy-8b8b40ac775a
+            tf.keras.layers.InputLayer((150, 150, 3)),
             tf.keras.layers.Rescaling(1./255, input_shape=(150,150,3)),
-            tf.keras.layers.Conv2D(32, 5, activation='relu'),
-            tf.keras.layers.MaxPooling2D(),
-            tf.keras.layers.Conv2D(64, 5, activation='relu'),
-            tf.keras.layers.MaxPooling2D(),
-            tf.keras.layers.Conv2D(128, 5, activation='relu'),
-            tf.keras.layers.MaxPooling2D(),
+            tf.keras.layers.Conv2D(64, 3, activation=tf.keras.activations.relu),
+            tf.keras.layers.MaxPool2D(),
+            tf.keras.layers.Conv2D(64, 3, activation=tf.keras.activations.relu),
+            tf.keras.layers.MaxPool2D(),
+            tf.keras.layers.Conv2D(128, 3, activation=tf.keras.activations.relu),
+            tf.keras.layers.AveragePooling2D(),
+            tf.keras.layers.Conv2D(128, 3, activation=tf.keras.activations.relu),
+            tf.keras.layers.MaxPool2D(),
+            tf.keras.layers.Conv2D(128, 3, activation=tf.keras.activations.relu),
+            tf.keras.layers.MaxPool2D(),
             tf.keras.layers.Flatten(),
-            tf.keras.layers.Dense(128, activation='relu'),
-            tf.keras.layers.Dense(8, activation= 'softmax')
+            tf.keras.layers.Dropout(0.1),
+            tf.keras.layers.Dense(256, activation=tf.keras.activations.relu),
+            tf.keras.layers.Dense(128, activation=tf.keras.activations.relu),
+            tf.keras.layers.Dense(8, activation=tf.keras.activations.softmax)
         ])
 
 model = CNN()
