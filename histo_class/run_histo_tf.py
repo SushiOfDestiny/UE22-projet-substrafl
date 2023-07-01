@@ -225,7 +225,7 @@ optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
 criterion = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # softmax return distribution of probability
 
 # Add model compiling
-model.compile(optimizer=optimizer, loss=criterion)
+model.compile(optimizer=optimizer, loss=criterion, metrics=['accuracy'])
 
 # no scheduler used in the example
 
