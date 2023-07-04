@@ -6,8 +6,6 @@ from typing import Union
 
 import tensorflow as tf
 
-#from substrafl.algorithms.pytorch import weight_manager
-#from substrafl.algorithms.pytorch.torch_base_algo import TorchAlgo
 from substrafl.index_generator import BaseIndexGenerator
 from substrafl.remote import remote_data
 from substrafl.schemas import FedAvgAveragedState
@@ -20,8 +18,6 @@ from tensorflow_algorithms.tf_base_algo import TFAlgo
 
 
 logger = logging.getLogger(__name__)
-
-
 
 
 class TFFedAvgAlgo(TFAlgo):
@@ -53,7 +49,9 @@ class TFFedAvgAlgo(TFAlgo):
         model: tf.keras.Sequential,
         criterion: tf.keras.losses.Loss,
         optimizer: tf.keras.optimizers.Optimizer,
-        index_generator: Union[BaseIndexGenerator, None], # no index_generator is allowed
+        index_generator: Union[
+            BaseIndexGenerator, None
+        ],  # no index_generator is allowed
         dataset: tf.data.Dataset,
         scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         seed: Optional[int] = None,
@@ -72,13 +70,6 @@ class TFFedAvgAlgo(TFAlgo):
             criterion (tf.keras.losses.Loss): A tensorflow criterion (loss).
             optimizer (tf.keras.optimizers.Optimizer): A tensorflow optimizer linked to the model.
             index_generator (BaseIndexGenerator): a stateful index generator.
-                Must inherit from BaseIndexGenerator. The __next__ method shall return a python object (batch_index)
-                which is used for selecting each batch from the output of the get_data method of the opener
-                during training in this way: ``x[batch_index], y[batch_index]``.
-                If overridden, the generator class must be defined either as part of a package or in a different file
-                than the one from which the ``execute_experiment`` function is called.
-                This generator is used as stateful ``batch_sampler`` of the data loader created from the given
-                ``dataset``
             dataset (tf.data.Dataset): an instantiable dataset class
             scheduler (tf.keras.optimizers.schedules.LearningRateSchedule, Optional): A tensorflow scheduler that will be called at every
                 batch. If None, no scheduler will be used. Defaults to None.
@@ -113,7 +104,9 @@ class TFFedAvgAlgo(TFAlgo):
     def train(
         self,
         datasamples: Any,
-        shared_state: Optional[FedAvgAveragedState] = None,  # Set to None per default for clarity reason as
+        shared_state: Optional[
+            FedAvgAveragedState
+        ] = None,  # Set to None per default for clarity reason as
         # the decorator will do it if the arg shared_state is not passed.
     ) -> FedAvgSharedState:
         """Train method of the fed avg strategy implemented with tensorflow. This method will execute the following
@@ -134,11 +127,11 @@ class TFFedAvgAlgo(TFAlgo):
             weights and previous weights)
         """
 
-        # Create tf dataset
+        # Create TFDataset instance
         train_dataset = self._dataset(datasamples, is_inference=False)
 
         if shared_state is None:
-            if self._index_generator is not None:
+            if self._index_generator is not None: # normally set to None
                 # Instantiate the index_generator
                 assert self._index_generator.n_samples is None
                 self._index_generator.n_samples = len(train_dataset)
@@ -147,14 +140,16 @@ class TFFedAvgAlgo(TFAlgo):
                 assert self._index_generator.n_samples is not None
             # The shared states is the average of the model parameter updates for all organizations
             # Hence we need to add it to the previous local state parameters
-            # with tf.device(self._device):
-                # parameter_updates = [tf.convert_to_tensor(x) for x in shared_state.avg_parameters_update]
-            parameter_updates = [tf.Variable(initial_value=x, dtype='float32') for x in shared_state.avg_parameters_update]
             
-            # A simpler version of following code is possible because increment_parameter 
+            parameter_updates = [
+                tf.Variable(initial_value=x, dtype="float32")
+                for x in shared_state.avg_parameters_update
+            ]
+
+            # A simpler version of following code is possible because increment_parameter
             # needs the object model, but its weights are enough
             # Deserializing and compiling
-            model=self.model_deserialize()
+            model = self.model_deserialize()
 
             weight_manager.increment_parameters(
                 model=model,
@@ -164,13 +159,11 @@ class TFFedAvgAlgo(TFAlgo):
             # Reserializing
             self.model_serialize(model)
 
-        # self._index_generator.reset_counter()
-
         old_parameters = self._model["weights"]
 
         # Train the model
         self._local_train(train_dataset)
-        
+
         if self._index_generator is not None:
             self._index_generator.check_num_updates()
 
@@ -182,9 +175,7 @@ class TFFedAvgAlgo(TFAlgo):
         # Re set to the previous state
         self._model["weights"] = old_parameters
 
-        # with tf.device('CPU:0'):
-        # https://stackoverflow.com/questions/34877523/in-tensorflow-what-is-tf-identity-used-for
-        parameters_updated = [tf.identity(p).numpy() for p in parameters_update]
+        parameters_updated = [tf.identity(p).numpy() for p in parameters_update] # Equivalent to tf.Tensor.read_value()
 
         return FedAvgSharedState(
             n_samples=len(train_dataset),
@@ -198,5 +189,5 @@ class TFFedAvgAlgo(TFAlgo):
             dict: a json-serializable dict with the attributes the user wants to store
         """
         summary = super().summary()
-        # We ignore the summary's modification because it is only linked to the batch norm parameters
+        
         return summary

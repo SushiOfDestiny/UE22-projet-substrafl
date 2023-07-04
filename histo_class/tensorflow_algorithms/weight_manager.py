@@ -5,14 +5,9 @@ import tensorflow as tf
 
 from collections import OrderedDict
 
+######## Hypothesis
 # we ignore batch normalization
 # we ignore device handling
-
-
-# model_parameters() -> model.weights attribute
-
-
-# get_parameters -> get_weights() returns a copy
 
 
 def increment_parameters(
@@ -25,14 +20,17 @@ def increment_parameters(
     Args:
         updates_multiplier (float, Optional): The coefficient which multiplies the updates before being added to the
             model. Defaults to 1.0.
-    
-    IMPORTANT THAT UPDATES HAS SAME DTYPE AS VARIABLE
+
+    Important:
+        updates should have dtype='float32' because it is the float format chosen for the project
     """
-    n_parameters=len(model.weights)
-    assert n_parameters == len(updates), "Length of model parameters and updates are unequal."
+    n_parameters = len(model.weights)
+    assert n_parameters == len(
+        updates
+    ), "Length of model parameters and updates are unequal."
 
     for i in range(n_parameters):
-        model.weights[i].assign_add(delta= updates_multiplier * updates[i])
+        model.weights[i].assign_add(delta=updates_multiplier * updates[i])
 
 
 def subtract_parameters(
@@ -90,14 +88,22 @@ def weighted_sum_parameters(
         len(parameters_list[0]) == len(parameters) for parameters in parameters_list
     ), "The number of parameters in each List is not the same"
 
-    assert len(parameters_list) == len(coefficient_list), "There must be a coefficient for each List of parameters"
+    assert len(parameters_list) == len(
+        coefficient_list
+    ), "There must be a coefficient for each List of parameters"
 
     for parameters_to_sum in zip(*parameters_list):
-        # assert all(
-        #     parameters_to_sum[0].numpy().shape == parameter.numpy().shape for parameter in parameters_to_sum
-        # ), "The shape of the parameters are unequal."
-        
-        weighted_sum.append(sum(param * coeff for param, coeff in zip(parameters_to_sum, coefficient_list)))
+        assert all(
+            # parameters_to_sum[0].numpy().shape == parameter.numpy().shape for parameter in parameters_to_sum
+            parameters_to_sum[0].shape == parameter.shape for parameter in parameters_to_sum
+        ), "The shape of the parameters are unequal."
+
+        weighted_sum.append(
+            sum(
+                param * coeff
+                for param, coeff in zip(parameters_to_sum, coefficient_list)
+            )
+        )
 
     return weighted_sum
 
@@ -119,7 +125,7 @@ def zeros_like_parameters(
     parameters = []
     for layer_weights in model.weights:
         parameters.append(tf.zeros_like(input=layer_weights))
-    
+
     return parameters
 
 
@@ -132,7 +138,7 @@ def zeros_like_parameters(
 #         s_dict[f'{layer.name}.weight'] = layer_weights
 #         s_dict[f'{layer.name}.bias'] = layer_bias
 
-#     return s_dict     
+#     return s_dict
 
 # def model_load_state_dict(model, s_dict):
 #     """load the dict infos into model"""
@@ -147,19 +153,20 @@ def zeros_like_parameters(
 #     s_dict['config'] = model.get_config()
 #     s_dict['weights'] = model.get_weights()
 
-#     return s_dict     
+#     return s_dict
+
 
 def model_state_dict(model) -> OrderedDict:
     """Create a dict from a compiled model
-    - the configuration (layers' structure) 
+    - the configuration (layers' structure)
     - the compile configuration (optimizer, loss, metric)
     - the parameters (weights and bias) of the model"""
     s_dict = OrderedDict({})
-    s_dict['config'] = model.get_config()
-    s_dict['compile_config'] = model.get_compile_config()
-    s_dict['weights'] = model.get_weights()
+    s_dict["config"] = model.get_config()
+    s_dict["compile_config"] = model.get_compile_config()
+    s_dict["weights"] = model.get_weights()
 
-    return s_dict   
+    return s_dict
 
 
 # def model_load_state_dict(model, s_dict):
@@ -167,7 +174,7 @@ def model_state_dict(model) -> OrderedDict:
 #     model.from_config(s_dict['config'])
 #     model.set_weights(s_dict['weights'])
 
-# does not work because we can't change the config/structure of an existing model, 
+# does not work because we can't change the config/structure of an existing model,
 # we have to create a new one directly with the right structure
 
 # def model_load_state_dict(s_dict) -> tf.keras.Sequential:
@@ -177,11 +184,12 @@ def model_state_dict(model) -> OrderedDict:
 #     new_model.set_weights(s_dict['weights'])
 #     return new_model
 
+
 def model_load_state_dict(s_dict) -> tf.keras.Sequential:
     """load the state dict into model
     Compile the model with compile_config infos"""
-    new_model = tf.keras.Sequential().from_config(s_dict['config'])
-    new_model.compile_from_config(s_dict['compile_config'])
-    new_model.set_weights(s_dict['weights'])
-    
+    new_model = tf.keras.Sequential().from_config(s_dict["config"])
+    new_model.compile_from_config(s_dict["compile_config"])
+    new_model.set_weights(s_dict["weights"])
+
     return new_model
