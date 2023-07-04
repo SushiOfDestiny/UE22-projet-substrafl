@@ -163,6 +163,9 @@ class TFAlgo(Algo):
 
         predictions = []
 
+        #TESTS
+        print(f"avant prédiction (et désérialisation): {self._model['weights'][2][0][0][0]}")
+
         # Deserialization and compiling
         model = self.model_deserialize()
 
@@ -185,6 +188,9 @@ class TFAlgo(Algo):
         # Reserialization, eventhough the model has not theoretically changed
         self.model_serialize(model)
 
+        # TESTS
+        print(f"après prédiction (et resérialisation): {self._model['weights'][2][0][0][0]}")
+
     def _local_train(
         self,
         train_dataset: tf.data.Dataset,
@@ -198,6 +204,8 @@ class TFAlgo(Algo):
             train_dataset (TFDataset / tf.data.Dataset): train_dataset build from the x and y returned by the opener.
         """
 
+        #TESTS
+        print(f"avant entraînement (et désérialisation): {self._model['weights'][2][0][0][0]}")
         # Deserialization and compiling w/ optimizer and loss
         model = self.model_deserialize()
 
@@ -208,8 +216,13 @@ class TFAlgo(Algo):
         # Normally, following ocde does update weights
         model.fit(x=train_data_loader.x, y=train_data_loader.y, batch_size=32, epochs=1)
 
+        print(f"après entraînement (et avant resérialisation): {model.get_weights()[2][0][0][0]}")
+
         # Reserialization
         self.model_serialize(model)
+
+        #TESTS
+        print(f"après entraînement (et resérialisation): {self._model['weights'][2][0][0][0]}")
 
     def _update_from_checkpoint(self, path: Path) -> dict:
         """Load the checkpoint and update the internal state

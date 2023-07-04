@@ -24,7 +24,7 @@ def setup_histo(data_path, N_CLIENTS):
 
     # converting datasets into numpy arrays of shapes (nb_img, 150, 150, 3) and (nb_labels, )
 
-    nb_samples = 200
+    nb_samples = 100
 
     train_images = np.array(list(train_images_ds.as_numpy_iterator()))[:nb_samples]
     train_labels = np.array(list(train_labels_ds.as_numpy_iterator()))[:nb_samples]

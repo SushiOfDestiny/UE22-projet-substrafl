@@ -220,9 +220,9 @@ class CNN(tf.keras.Sequential):
 
 model = CNN()
 
-optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+optimizer = tf.keras.optimizers.Adam()
 
-criterion = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # softmax return distribution of probability
+criterion = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # softmax already returns distribution of probability
 
 # Add model compiling
 model.compile(optimizer=optimizer, loss=criterion, metrics=['accuracy'])
