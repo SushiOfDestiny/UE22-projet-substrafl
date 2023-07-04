@@ -141,10 +141,12 @@ class TFFedAvgAlgo(TFAlgo):
             # The shared states is the average of the model parameter updates for all organizations
             # Hence we need to add it to the previous local state parameters
             
-            parameter_updates = [
-                tf.Variable(initial_value=x, dtype="float32")
-                for x in shared_state.avg_parameters_update
-            ]
+            # parameter_updates = [
+            #     tf.Variable(initial_value=x, dtype="float32")
+            #     for x in shared_state.avg_parameters_update
+            # ]
+
+            parameters_updates = shared_state.avg_parameters_update
 
             # A simpler version of following code is possible because increment_parameter
             # needs the object model, but its weights are enough
@@ -153,7 +155,7 @@ class TFFedAvgAlgo(TFAlgo):
 
             weight_manager.increment_parameters(
                 model=model,
-                updates=parameter_updates,
+                updates=parameters_updates,
             )
 
             # Reserializing
@@ -175,11 +177,12 @@ class TFFedAvgAlgo(TFAlgo):
         # Re set to the previous state
         self._model["weights"] = old_parameters
 
-        parameters_updated = [tf.identity(p).numpy() for p in parameters_update] # Equivalent to tf.Tensor.read_value()
+        # parameters_updated = [tf.identity(p).numpy() for p in parameters_update] # Equivalent to tf.Tensor.read_value()
+
 
         return FedAvgSharedState(
             n_samples=len(train_dataset),
-            parameters_update=parameters_updated,
+            parameters_update=parameters_update, # maybe we will have to convert parameters_update in List(tf.Variable)
         )
 
     def summary(self):

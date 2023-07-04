@@ -1,6 +1,7 @@
 from typing import Generator
 from typing import List
 
+import numpy as np
 import tensorflow as tf
 
 from collections import OrderedDict
@@ -10,9 +11,34 @@ from collections import OrderedDict
 # we ignore device handling
 
 
+def model_state_dict(model) -> OrderedDict:
+    """Create a dict from a compiled model
+    - the configuration (layers' structure)
+    - the compile configuration (optimizer, loss, metric)
+    - the parameters (weights and bias) of the model
+    """
+    s_dict = OrderedDict({})
+    s_dict["config"] = model.get_config()
+    s_dict["compile_config"] = model.get_compile_config()
+    s_dict["weights"] = model.get_weights()
+
+    return s_dict
+
+
+def model_load_state_dict(s_dict) -> tf.keras.Sequential:
+    """load the state dict into model
+    Compile the model with compile_config infos
+    """
+    new_model = tf.keras.Sequential().from_config(s_dict["config"])
+    new_model.compile_from_config(s_dict["compile_config"])
+    new_model.set_weights(s_dict["weights"])
+
+    return new_model
+
+
 def increment_parameters(
     model: tf.keras.Model,
-    updates: List[tf.Variable],
+    updates: np.array, # test with np.array and not np.array
     updates_multiplier: float = 1.0,
 ) -> None:
     """Add the given update to the model parameters. This function modifies the given model internally and therefore returns nothing.
@@ -29,20 +55,27 @@ def increment_parameters(
         updates
     ), "Length of model parameters and updates are unequal."
 
+    # for i in range(n_parameters):
+    #     model.weights[i].assign_add(delta=updates_multiplier * updates[i])
+
+    current_parameters = model.get_weights()
+
     for i in range(n_parameters):
-        model.weights[i].assign_add(delta=updates_multiplier * updates[i])
+        current_parameters[i] = current_parameters[i] + updates_multiplier * updates[i]
+    
+    model.set_weights(current_parameters)
 
 
 def subtract_parameters(
-    parameters: List[tf.Variable],
-    parameters_to_subtract: List[tf.Variable],
-) -> List[tf.Variable]:
+    parameters: List[np.array],
+    parameters_to_subtract: List[np.array],
+) -> List[np.array]:
     """
     subtract the given list of tf parameters i.e. : parameters - parameters_to_subtract.
 
     Args:
     Returns:
-        typing.List[tf.Variable]: The subtraction of the given parameters.
+        typing.List[np.array]: The subtraction of the given parameters.
     """
     return weighted_sum_parameters(
         parameters_list=[parameters, parameters_to_subtract],
@@ -51,15 +84,15 @@ def subtract_parameters(
 
 
 def add_parameters(
-    parameters: List[tf.Variable],
-    parameters_to_add: List[tf.Variable],
-) -> List[tf.Variable]:
+    parameters: List[np.array],
+    parameters_to_add: List[np.array],
+) -> List[np.array]:
     """
     add the given list of tf parameters i.e. : parameters + parameters_to_add.
 
     Args:
     Returns:
-        typing.List[tf.Variable]: The addition of the given parameters.
+        typing.List[np.array]: The addition of the given parameters.
     """
     return weighted_sum_parameters(
         parameters_list=[parameters, parameters_to_add],
@@ -68,9 +101,9 @@ def add_parameters(
 
 
 def weighted_sum_parameters(
-    parameters_list: List[List[tf.Variable]],
+    parameters_list: List[List[np.array]],
     coefficient_list: List[float],
-) -> List[tf.Variable]:
+) -> List[np.array]:
     """
     Do a weighted sum of the given lists of tf parameters.
     Those elements can be extracted from a model thanks to the :func:`~get_weights` function.
@@ -79,7 +112,7 @@ def weighted_sum_parameters(
         parameters_list: [[org0_layer0_parameters, ...], [org1_layer0_parameters, ...], ...]
         coefficient_list (typing.List[float]): A list of coefficients which will be applied to each list of parameters.
     Returns:
-        typing.List[tf.Variable]: The weighted sum of the given list of tf parameters.
+        typing.List[np.array]: The weighted sum of the given list of tf parameters.
     """
 
     weighted_sum = []
@@ -95,6 +128,7 @@ def weighted_sum_parameters(
     for parameters_to_sum in zip(*parameters_list):
         assert all(
             # parameters_to_sum[0].numpy().shape == parameter.numpy().shape for parameter in parameters_to_sum
+            # parameters_to_sum[0].read_value().shape == parameter.read_value().shape for parameter in parameters_to_sum
             parameters_to_sum[0].shape == parameter.shape for parameter in parameters_to_sum
         ), "The shape of the parameters are unequal."
 
@@ -113,83 +147,17 @@ def weighted_sum_parameters(
 
 def zeros_like_parameters(
     model: tf.keras.Model,
-) -> List[tf.Variable]:
+) -> List[np.array]:
     """Copy the model parameters from the provided tf model and sets values to zero.
 
     Args:
 
     Returns:
-        typing.List[tf.Variable]: The list of torch parameters of the provided model
+        typing.List[np.array]: The list of tf parameters of the provided model
         with values set to zero.
     """
-    parameters = []
-    for layer_weights in model.weights:
-        parameters.append(tf.zeros_like(input=layer_weights))
+    parameters = model.get_weights()
+    for layer in parameters:
+        layer = 0.
 
     return parameters
-
-
-# def model_state_dict(model) -> OrderedDict[str, tf.Variable]:
-#     """analogous to torch method"""
-#     s_dict = OrderedDict({})
-#     for layer in model.layers:
-#         layer_weights, layer_bias = layer.get_weights()
-#         layer_weights, layer_bias = tf.Variable(layer_weights,dtype='float32'), tf.Variable(layer_bias,dtype='float32')
-#         s_dict[f'{layer.name}.weight'] = layer_weights
-#         s_dict[f'{layer.name}.bias'] = layer_bias
-
-#     return s_dict
-
-# def model_load_state_dict(model, s_dict):
-#     """load the dict infos into model"""
-#     for layer in model.layers:
-#         layer.set_weights(
-#             (s_dict[f'{layer.name}.weight'], s_dict[f'{layer.name}.bias'])
-#         )
-
-# def model_state_dict(model) -> OrderedDict:
-#     """Create a dict with the configuration (layers' structure) and the parameters (weights and bias) of the model"""
-#     s_dict = OrderedDict({})
-#     s_dict['config'] = model.get_config()
-#     s_dict['weights'] = model.get_weights()
-
-#     return s_dict
-
-
-def model_state_dict(model) -> OrderedDict:
-    """Create a dict from a compiled model
-    - the configuration (layers' structure)
-    - the compile configuration (optimizer, loss, metric)
-    - the parameters (weights and bias) of the model"""
-    s_dict = OrderedDict({})
-    s_dict["config"] = model.get_config()
-    s_dict["compile_config"] = model.get_compile_config()
-    s_dict["weights"] = model.get_weights()
-
-    return s_dict
-
-
-# def model_load_state_dict(model, s_dict):
-#     """load the state dict into model"""
-#     model.from_config(s_dict['config'])
-#     model.set_weights(s_dict['weights'])
-
-# does not work because we can't change the config/structure of an existing model,
-# we have to create a new one directly with the right structure
-
-# def model_load_state_dict(s_dict) -> tf.keras.Sequential:
-#     """load the state dict into model
-#     Returned model has to be compiled"""
-#     new_model = tf.keras.Sequential().from_config(s_dict['config'])
-#     new_model.set_weights(s_dict['weights'])
-#     return new_model
-
-
-def model_load_state_dict(s_dict) -> tf.keras.Sequential:
-    """load the state dict into model
-    Compile the model with compile_config infos"""
-    new_model = tf.keras.Sequential().from_config(s_dict["config"])
-    new_model.compile_from_config(s_dict["compile_config"])
-    new_model.set_weights(s_dict["weights"])
-
-    return new_model

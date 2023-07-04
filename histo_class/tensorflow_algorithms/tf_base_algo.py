@@ -158,23 +158,25 @@ class TFAlgo(Algo):
                 Please overwrite the predict function of your algorithm.
         """
 
-        # Variable controlling the inference mode
-        inference_mode = tf.Variable(True, trainable=False)
+        # # Variable controlling the inference mode
+        # inference_mode = tf.Variable(True, trainable=False)
 
         predictions = []
 
         # Deserialization and compiling
         model = self.model_deserialize()
 
-        if inference_mode:
-            # Code specific to the inference mode
+        # if inference_mode:
+        #     # Code specific to the inference mode
 
-            for i in range(len(predict_dataset)):
-                x = predict_dataset[i]
-                y = model(x)[0]  # is a logit
-                predictions.append(y)
+        # Normally, following code does not updates weight
 
-            predictions = tf.convert_to_tensor(value=predictions)
+        for i in range(len(predict_dataset)):
+            x = predict_dataset[i]
+            y = model(x)[0]  # is a logit 
+            predictions.append(y)
+
+        predictions = tf.convert_to_tensor(value=predictions)
 
         # This is equivalent to calling <variable>.read_value().
         predictions = tf.identity(predictions)
@@ -203,6 +205,7 @@ class TFAlgo(Algo):
         train_data_loader = train_dataset
 
         # We use the simplified keras method `fit`
+        # Normally, following ocde does update weights
         model.fit(x=train_data_loader.x, y=train_data_loader.y, batch_size=32, epochs=1)
 
         # Reserialization
