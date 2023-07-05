@@ -14,7 +14,6 @@ import tensorflow_datasets as tfds
 
 import tensorflow_algorithms.weight_manager as weight_manager
 
-# import tf.keras
 # Setup
 # *****
 
