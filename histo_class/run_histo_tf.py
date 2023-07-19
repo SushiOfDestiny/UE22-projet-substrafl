@@ -1,4 +1,10 @@
 # Using TensorFlow FedAvg on Colorectal Histology dataset
+
+# Structure of the example
+# The structure is similar to the existing example "Using Torch FedAvg on MNIST dataset"
+# (https://docs.substra.org/en/stable/substrafl_doc/examples/get_started/run_mnist_torch.html#sphx-glr-substrafl-doc-examples-get-started-run-mnist-torch-py)
+
+# Modules
 # %matplotlib inline
 import codecs
 import os
@@ -47,7 +53,9 @@ clients = {
 # Store organization IDs
 ORGS_ID = list(clients.keys())
 ALGO_ORG_ID = ORGS_ID[0]  # Algo provider is defined as the first organization.
-DATA_PROVIDER_ORGS_ID = ORGS_ID[1:]  # Data providers orgs are the two last organizations.
+DATA_PROVIDER_ORGS_ID = ORGS_ID[
+    1:
+]  # Data providers orgs are the two last organizations.
 # Data Preparation
 
 # This section downloads (if needed) the **histology dataset**.
@@ -58,10 +66,11 @@ from tf_fedavg_assets.dataset.histo_dataset import setup_histo
 data_path = pathlib.Path.cwd() / "tmp" / "data_histo"
 
 setup_histo(data_path, len(DATA_PROVIDER_ORGS_ID))
+
 # Visualizing the Dataset
 # visualize dataset
-images = np.load('tmp/data_histo/org_1/train/train_images.npy')
-labels = np.load('tmp/data_histo/org_1/train/train_labels.npy')
+images = np.load("tmp/data_histo/org_1/train/train_images.npy")
+labels = np.load("tmp/data_histo/org_1/train/train_labels.npy")
 
 # plt.figure(figsize=(10,10))
 # for i in range(25):
@@ -72,8 +81,10 @@ labels = np.load('tmp/data_histo/org_1/train/train_labels.npy')
 #     plt.imshow(images[i])
 #     plt.xlabel(labels[i])
 # plt.show()
-    
-min(labels), max(labels) # labels go from 0 to 7
+
+# min(labels), max(labels) # labels go from 0 to 7
+
+
 # Dataset registration
 
 # A `documentation/concepts:Dataset` is composed of an **opener**, which is a Python script that can load
@@ -99,7 +110,6 @@ train_datasample_keys = {}
 test_datasample_keys = {}
 
 for i, org_id in enumerate(DATA_PROVIDER_ORGS_ID):
-
     client = clients[org_id]
 
     permissions_dataset = Permissions(public=False, authorized_ids=[ALGO_ORG_ID])
@@ -133,6 +143,8 @@ for i, org_id in enumerate(DATA_PROVIDER_ORGS_ID):
         path=data_path / f"org_{i+1}" / "test",
     )
     test_datasample_keys[org_id] = client.add_data_sample(data_sample)
+
+
 # # Metric registration
 
 # A metric is a function used to evaluate the performance of your model on one or several
@@ -152,7 +164,9 @@ import numpy as np
 from substrafl.dependency import Dependency
 from substrafl.remote.register import add_metric
 
-permissions_metric = Permissions(public=False, authorized_ids=[ALGO_ORG_ID] + DATA_PROVIDER_ORGS_ID)
+permissions_metric = Permissions(
+    public=False, authorized_ids=[ALGO_ORG_ID] + DATA_PROVIDER_ORGS_ID
+)
 
 # The Dependency object is instantiated in order to install the right libraries in
 # the Python environment of each organization.
@@ -160,8 +174,9 @@ metric_deps = Dependency(pypi_dependencies=["numpy==1.23.1", "scikit-learn==1.1.
 
 
 def accuracy(datasamples, predictions_path):
-    y_true = datasamples["labels"] # labels from a batch
-    y_pred = np.load(predictions_path) # predictions from a batch, as logits 
+    """Compares the predictions with the labels, as logits"""
+    y_true = datasamples["labels"]  # labels from a batch
+    y_pred = np.load(predictions_path)  # predictions from a batch, as logits
 
     return accuracy_score(y_true, np.argmax(y_pred, axis=1))
     # return accuracy_score(y_true, y_pred)
@@ -173,6 +188,8 @@ metric_key = add_metric(
     permissions=permissions_metric,
     dependencies=metric_deps,
 )
+
+
 # Specify the machine learning components
 # ***************************************
 # This section uses the future TF based SubstraFL API to simplify the definition of machine learning components.
@@ -188,80 +205,77 @@ metric_key = add_metric(
 # - Actually run the computations
 # # Model definition
 
-# We choose to use a classic torch CNN as the model to train. The model structure is defined by the user independently
+# We choose to use a Tensorflow Keras Sequential model CNN as the model to train. The model structure is defined by the user independently
 # of SubstraFL.
 seed = 42
 tf.random.set_seed(seed)
 
-# @tf.keras.utils.register_keras_serializable(tf.keras.Sequential)
+# CNN layers have been taken from :
+# https://medium.com/@ashraf.dasa/tensorflow-image-classification-of-colorectal-cancer-histology-92-5-accuracy-8b8b40ac775a
+
 class CNN(tf.keras.Sequential):
     def __init__(self):
-        super(CNN, self).__init__(layers=[
-            # https://medium.com/@ashraf.dasa/tensorflow-image-classification-of-colorectal-cancer-histology-92-5-accuracy-8b8b40ac775a
-            tf.keras.layers.InputLayer((150, 150, 3)),
-            tf.keras.layers.Rescaling(1./255, input_shape=(150,150,3)),
-            tf.keras.layers.Conv2D(64, 3, activation=tf.keras.activations.relu),
-            tf.keras.layers.MaxPool2D(),
-            tf.keras.layers.Conv2D(64, 3, activation=tf.keras.activations.relu),
-            tf.keras.layers.MaxPool2D(),
-            tf.keras.layers.Conv2D(128, 3, activation=tf.keras.activations.relu),
-            tf.keras.layers.AveragePooling2D(),
-            tf.keras.layers.Conv2D(128, 3, activation=tf.keras.activations.relu),
-            tf.keras.layers.MaxPool2D(),
-            tf.keras.layers.Conv2D(128, 3, activation=tf.keras.activations.relu),
-            tf.keras.layers.MaxPool2D(),
-            tf.keras.layers.Flatten(),
-            tf.keras.layers.Dropout(0.1),
-            tf.keras.layers.Dense(256, activation=tf.keras.activations.relu),
-            tf.keras.layers.Dense(128, activation=tf.keras.activations.relu),
-            tf.keras.layers.Dense(8, activation=tf.keras.activations.softmax)
-        ])
+        super(CNN, self).__init__(
+            layers=[
+                tf.keras.layers.InputLayer((150, 150, 3)),
+                tf.keras.layers.Rescaling(1.0 / 255, input_shape=(150, 150, 3)),
+                tf.keras.layers.Conv2D(64, 3, activation=tf.keras.activations.relu),
+                tf.keras.layers.MaxPool2D(),
+                tf.keras.layers.Conv2D(64, 3, activation=tf.keras.activations.relu),
+                tf.keras.layers.MaxPool2D(),
+                tf.keras.layers.Conv2D(128, 3, activation=tf.keras.activations.relu),
+                tf.keras.layers.AveragePooling2D(),
+                tf.keras.layers.Conv2D(128, 3, activation=tf.keras.activations.relu),
+                tf.keras.layers.MaxPool2D(),
+                tf.keras.layers.Conv2D(128, 3, activation=tf.keras.activations.relu),
+                tf.keras.layers.MaxPool2D(),
+                tf.keras.layers.Flatten(),
+                tf.keras.layers.Dropout(0.1),
+                tf.keras.layers.Dense(256, activation=tf.keras.activations.relu),
+                tf.keras.layers.Dense(128, activation=tf.keras.activations.relu),
+                tf.keras.layers.Dense(8, activation=tf.keras.activations.softmax), 
+                # Outputs of the model are probability distributions and therefore 
+                # no logits
+            ]
+        )
 
+# Model, optimizer and loss function instanciation
 model = CNN()
 
 optimizer = tf.keras.optimizers.Adam()
 
-criterion = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False) # softmax already returns distribution of probability
+criterion = tf.keras.losses.SparseCategoricalCrossentropy(
+    from_logits=False
+)
 
-# Add model compiling
-model.compile(optimizer=optimizer, loss=criterion, metrics=['accuracy'])
+# A specificity of a Tensorflow Keras model is that we have to link it with an
+# optimizer and a loss function with the compile method
+model.compile(optimizer=optimizer, loss=criterion, metrics=["accuracy"])
 
-# no scheduler used in the example
+# To simplify, we do not use any scheduler in the example. It may lead to a less
+# efficient model
 
-####################
-# SERIALIZING   
-# with dict
+# Serializing the model. 
+# It is not a real serialization because we do not encode the model
+# in a file as a binary information, but we write its global configuration in a dictionary
+# that is serializable. See the definition of the following method
 model_state_dict = weight_manager.model_state_dict(model)
-# optimizer_state_dict = optimizer.get_config()
 
 
 # Specifying on how much data to train
 
-# To specify on how much data to train at each round, we use the `index_generator` object.
-# We specify the batch size and the number of batches to consider for each round (called `num_updates`).
-# See `substrafl_doc/substrafl_overview:Index Generator` for more details.
-
-from substrafl.index_generator import NpIndexGenerator
-
-# Number of model updates between each FL strategy aggregation.
-nb_samples = 5000
-nb_train_samples = 4000 # we split the data in 80% train / 20% eval
-# Number of samples per update.
-BATCH_SIZE = 32
-
-# Adjusting number of updates according to dataset size
-# but normally it should not be used
-NUM_UPDATES = np.floor(nb_train_samples / BATCH_SIZE)
-
-####################
-# no use of index_generator
-# index_generator = NpIndexGenerator(
-#     batch_size=BATCH_SIZE,
-#     num_updates=NUM_UPDATES,
-# )
-index_generator = None
+# To simplify, no `index_generator` object is used.
+# We decided that each local training is made on an epoch, so that we do not have to
+# memorize which samples have been used during the training.
+# The reason is because we did not find any Tensorflow sampler object we could use with
+# dataset object
 
 # TensorFlow Dataset definition
+
+# Following custom Dataset class has been built similarly to the custom one in the original
+# example.
+# However, we do not use its specificity in the experiment, and we call instead its
+# attributes x and y
 
 # This tf Dataset is used to preprocess the data using the `__getitem__` function.
 
@@ -271,93 +285,64 @@ index_generator = None
 # This behavior can be changed by re-writing the `_local_train` or `predict` methods.
 
 
-# img = images[0][None,...]
-# img2 = img / 255
-# plt.figure(figsize=(10,10))
-# plt.subplot(1,2,1)
-# plt.imshow(img[0])
-# plt.subplot(1,2,2)
-# plt.imshow(img2[0])
-# plt.show()
-
-# images[0][None,...].shape
-# images[0][...].shape
-# images[0].shape
-# images2 = np.copy(images)
-# images2 = images2 / 255.
-# images
-# images2
-# images[0].dtype, images2[0].dtype
-# plt.figure(figsize=(10,10))
-# plt.subplot(1,2,1)
-# plt.imshow(images[0])
-# plt.subplot(1,2,2)
-# plt.imshow(images2[0])
-# plt.show()
-
-
 class TFDataset(tf.data.Dataset):
     def __init__(self, datasamples, is_inference: bool):
-        self.x = datasamples["images"] / 255. # new datasamples with normalized datas
+        self.x = datasamples["images"] / 255.0  # new datasamples with normalized datas
         self.y = datasamples["labels"]
         self.is_inference = is_inference
-        self.nb_classes = 8 # labels go from 0 to 7
-        # self.one_hots = tf.one_hot(indices=list(range(self.nb_classes)), depth=self.nb_classes, dtype='float32')
-        # =
-        # [[1., 0., 0., 0., 0., 0., 0., 0.],
-        #  [0., 1., 0., 0., 0., 0., 0., 0.],
-        #  [0., 0., 1., 0., 0., 0., 0., 0.],
-        #  ...,
-        # ]
-        self.input_shape = self.x[0].shape # shape of input images (150,150,3)
-
+        self.nb_classes = 8  # labels go from 0 to 7
+        self.input_shape = self.x[0].shape  # shape of input images (150,150,3)
 
     def __getitem__(self, idx):
-
         if self.is_inference:
-            x = tf.convert_to_tensor(value=self.x[idx][None, ...], dtype='float32') # keep float32
+            x = tf.convert_to_tensor(
+                value=self.x[idx][None, ...], dtype="float32"
+            )  # keep float32
             return x
 
         else:
-            x = tf.convert_to_tensor(value=self.x[idx][None, ...], dtype='float32')
+            x = tf.convert_to_tensor(value=self.x[idx][None, ...], dtype="float32")
             # y = self.one_hots[self.y[idx]] # logit form
-            y = self.y[idx] # label form
+            y = self.y[idx]  # label form
             return x, y
 
     def __len__(self):
         return len(self.x)
     
-
-    # adding missing methods
+    # Following methods are required to build an instance
 
     def _inputs(self):
         """Returns a list of the input datasets of the dataset."""
         if self.is_inference:
             return []
         else:
-            return tf.TensorSpec(shape=self.input_shape, dtype=tf.float32), tf.TensorSpec(shape=(self.nb_classes,), dtype=tf.float32)
+            return tf.TensorSpec(
+                shape=self.input_shape, dtype=tf.float32
+            ), tf.TensorSpec(shape=(self.nb_classes,), dtype=tf.float32)
 
     def element_spec(self):
         """The type specification of an element of this dataset."""
         if self.is_inference:
             return tf.TensorSpec(shape=self.input_shape, dtype=tf.float32)
         else:
-            return tf.TensorSpec(shape=self.input_shape, dtype=tf.float32), tf.TensorSpec(shape=(self.nb_classes,), dtype=tf.float32)
-# to test the previous class, we recreate a data_sample
-# we assume a datasample is like
-# dict('images': np.array,
-#      'labels': np.array)
-data_sample1 = dict(
-    {
-    'images': images[:10],
-    'labels': labels[:10]
-    }
-)
-data_sample1['images'][0].shape
-test_ds = TFDataset(datasamples=data_sample1, is_inference=False)
-# Test of tf_data__loader
+            return tf.TensorSpec(
+                shape=self.input_shape, dtype=tf.float32
+            ), tf.TensorSpec(shape=(self.nb_classes,), dtype=tf.float32)
+
+# # TFDataset test
+# # to test the previous class, we recreate a data_sample
+# # we assume a datasample is like
+# # dict('images': np.array,
+# #      'labels': np.array)
+# data_sample1 = dict({"images": images[:10], "labels": labels[:10]})
+# data_sample1["images"][0].shape
+# test_ds = TFDataset(datasamples=data_sample1, is_inference=False)
+
+# # Test of tf_data__loader
 # data = tf.data.Dataset.from_tensor_slices(test_ds)
 # fail so tf_data_loader doesn't work atm
+
+
 # SubstraFL algo definition
 from tensorflow_algorithms.tf_fed_avg_algo import TFFedAvgAlgo
 
@@ -368,12 +353,14 @@ class MyAlgo(TFFedAvgAlgo):
             model=model_state_dict,
             criterion=criterion,
             optimizer=None,
-            index_generator=index_generator,
+            index_generator=None,
             dataset=TFDataset,
             seed=seed,
         )
 
-
+# Following code is specific tu Substrafl and not linked to Tensorflow
+# Therefore, we did not change it from original example, except for the
+# dependencies  
 
 from substrafl.strategies import FedAvg
 
@@ -389,7 +376,6 @@ aggregation_node = AggregationNode(ALGO_ORG_ID)
 train_data_nodes = list()
 
 for org_id in DATA_PROVIDER_ORGS_ID:
-
     # Create the Train Data Node (or training task) and save it in a list
     train_data_node = TrainDataNode(
         organization_id=org_id,
@@ -405,7 +391,6 @@ from substrafl.evaluation_strategy import EvaluationStrategy
 test_data_nodes = list()
 
 for org_id in DATA_PROVIDER_ORGS_ID:
-
     # Create the Test Data Node (or testing task) and save it in a list
     test_data_node = TestDataNode(
         organization_id=org_id,
@@ -426,7 +411,11 @@ NUM_ROUNDS = 3
 
 # The Dependency object is instantiated in order to install the right libraries in
 # the Python environment of each organization.
-algo_deps = Dependency(pypi_dependencies=["numpy==1.23.1", "tensorflow=2.12.0"], local_code=[pathlib.Path.cwd() / "tensorflow_algorithms"])
+algo_deps = Dependency(
+    # Dependencies changed
+    pypi_dependencies=["numpy==1.23.1", "tensorflow=2.12.0"],
+    local_code=[pathlib.Path.cwd() / "tensorflow_algorithms"],
+)
 
 compute_plan = execute_experiment(
     client=clients[ALGO_ORG_ID],
@@ -450,8 +439,7 @@ print("\nPerformance Table: \n")
 print(performances_df[["worker", "round_idx", "performance"]])
 
 
-
-# Plot results 
+# Plot results
 
 import matplotlib.pyplot as plt
 
@@ -465,3 +453,5 @@ for id in DATA_PROVIDER_ORGS_ID:
 
 plt.legend(loc="lower right")
 plt.show()
+
+# Result interpretation
