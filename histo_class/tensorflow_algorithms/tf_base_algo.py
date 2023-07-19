@@ -56,17 +56,20 @@ class TFAlgo(Algo):
 
         self._optimizer = optimizer
         assert self._optimizer is None, "Optimizer is not None"
+        # Optimizer information are in the model information
 
         self._criterion = criterion
 
         self._scheduler = scheduler
         assert self._scheduler is None, "Scheduler is not None"
+        # No Scheduler is used
 
         self._index_generator = index_generator
         assert self._index_generator is None, "Index Generator is not None"
+        # No Index Generator is used
 
         self._dataset: tf.data.Dataset = dataset
-        # dataset check overlooked
+        # Dataset check overlooked, because we assumed it is correctly chosen
 
     @property
     def model(self) -> dict:
@@ -78,9 +81,9 @@ class TFAlgo(Algo):
         return self._model
 
     def model_deserialize(self) -> tf.keras.Sequential:
-        """deserialize self._model and return a compiled model with the particular config,
-        compile config and weights passed as parameters
-        We choose a Sequential model eventhough it is a custom CNN
+        """Return a compiled model with the particular config,
+        compile config and weights contained in the self._model attribute.
+        We choose a Sequential model eventhough it is a custom CNN.
         """
 
         new_model = weight_manager.model_load_state_dict(self._model)
@@ -88,7 +91,9 @@ class TFAlgo(Algo):
         return new_model
 
     def model_serialize(self, model: tf.keras.Sequential) -> None:
-        """updates serialized model self._model with the state_dict (config, compile config and weights) of model"""
+        """Updates the self._model attribute with the state_dict (config, compile config and weights) of the model
+        passed as argument.
+        """
 
         self._model = weight_manager.model_state_dict(model)
 
@@ -137,59 +142,42 @@ class TFAlgo(Algo):
             shutil.move(str(predictions_path) + ".npy", predictions_path)
 
     def _local_predict(self, predict_dataset: tf.data.Dataset, predictions_path):
-        """Execute the following operations:
-
-            * Create the tensorflow dataloader.
-            * Set the model to `eval` mode
-            * Save the predictions using the
-              :py:func:`~substrafl.algorithms.tensorflow.tf_base_algo.TFAlgo._save_predictions` function.
-
-        Args:
-            predict_dataset (tf.data.Dataset): predict_dataset build from the x returned by the opener.
+        """Args:
+            predict_dataset (tf.data.Dataset)
 
         Important:
             The onus is on the user to ``save`` the compute predictions. Substrafl provides the
             :py:func:`~substrafl.algorithms.tensorflow.tf_base_algo.TFAlgo._save_predictions` to do so.
             The user can load those predictions from a metric file with the command:
             ``y_pred = np.load(inputs['predictions'])``.
-
-        Raises:
-            BatchSizeNotFoundError: No default batch size have been found to perform local prediction.
-                Please overwrite the predict function of your algorithm.
         """
-
-        # # Variable controlling the inference mode
-        # inference_mode = tf.Variable(True, trainable=False)
 
         predictions = []
 
-        #TESTS
-        print(f"avant prédiction (et désérialisation): {self._model['weights'][2][0][0][0][:5]}")
+        # TESTS
+        before_pred = self._model['weights'][2][0][0][0][:5]
+        # print(f"avant prédiction (et désérialisation): {before_pred}")
 
         # Deserialization and compiling
         model = self.model_deserialize()
 
-        # if inference_mode:
-        #     # Code specific to the inference mode
-
         # Normally, following code does not updates weight
-
+        # Gathering predictions of the model
         for i in range(len(predict_dataset)):
             x = predict_dataset[i]
-            y = model(x)[0]  # is a logit 
+            y = model(x)[0]
             predictions.append(y)
 
-        predictions = tf.convert_to_tensor(value=predictions)
-
-        # This is equivalent to calling <variable>.read_value().
-        predictions = tf.identity(predictions)
         self._save_predictions(predictions, predictions_path)
 
         # Reserialization, eventhough the model has not theoretically changed
         self.model_serialize(model)
 
         # TESTS
-        print(f"après prédiction (et resérialisation): {self._model['weights'][2][0][0][0][:5]}")
+        after_pred = self._model['weights'][2][0][0][0][:5]
+        # print(f"après prédiction (et resérialisation): {after_pred}")
+
+        print(f"Variation des poids du modèle après - avant prédiction : { after_pred - before_pred }")
 
     def _local_train(
         self,
@@ -205,24 +193,29 @@ class TFAlgo(Algo):
         """
 
         #TESTS
-        print(f"avant entraînement (et désérialisation): {self._model['weights'][2][0][0][0][:5]}")
+        before_train = self._model['weights'][2][0][0][0][:5]
+        # print(f"avant entraînement (et désérialisation): {before_train}")
+
         # Deserialization and compiling w/ optimizer and loss
         model = self.model_deserialize()
 
-        # Avoiding the loader probleme
+        # Avoiding the data_loader problem
         train_data_loader = train_dataset
 
-        # We use the simplified keras method `fit`
-        # Normally, following ocde does update weights
+        # We use the simplified keras method `fit` to train the model
         model.fit(x=train_data_loader.x, y=train_data_loader.y, batch_size=32, epochs=1)
 
-        print(f"après entraînement (et avant resérialisation): {model.get_weights()[2][0][0][0][:5]}")
+        after_train = model.get_weights()[2][0][0][0][:5]
+        # print(f"après entraînement (et avant resérialisation): {after_train}")
+        
+        print(f"Variation des poids du modèle après - avant entrainement (avant sérialisation) : { after_train - before_train }")
 
         # Reserialization
         self.model_serialize(model)
+        after_train_2 = self._model['weights'][2][0][0][0][:5]
+        # print(f"après entraînement (et resérialisation): {after_train_2}")
 
-        #TESTS
-        print(f"après entraînement (et resérialisation): {self._model['weights'][2][0][0][0][:5]}")
+        print(f"Variation des poids du modèle après - avant sérialisation : { after_train_2 - after_train }")
 
     def _update_from_checkpoint(self, path: Path) -> dict:
         """Load the checkpoint and update the internal state
@@ -312,15 +305,15 @@ class TFAlgo(Algo):
             "index_generator": self._index_generator,
         }
         if self._optimizer is not None:
-            checkpoint["optimizer_state_dict"] = self._optimizer
+            checkpoint["optimizer_state_dict"] = self._optimizer.get_config()
         if self._scheduler is not None:
             checkpoint["scheduler_state_dict"] = self._scheduler.get_config()
 
         return checkpoint
 
     def _check_tf_dataset(self):
-        """Check that the given Dataset is not an instance
-        Currently not used
+        """Currently not used
+        Check that the given Dataset is not an instance
         """
         try:
             issubclass(self._dataset, tf.data.Dataset)

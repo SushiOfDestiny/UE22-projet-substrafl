@@ -24,6 +24,8 @@ def setup_histo(data_path, N_CLIENTS):
 
     # converting datasets into numpy arrays of shapes (nb_img, 150, 150, 3) and (nb_labels, )
 
+    # To accelerate tests, we adjust the number of samples used 
+    # in experiment
     nb_samples = 100
 
     train_images = np.array(list(train_images_ds.as_numpy_iterator()))[:nb_samples]

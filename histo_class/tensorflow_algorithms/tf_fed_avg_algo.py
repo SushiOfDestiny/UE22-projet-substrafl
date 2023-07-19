@@ -27,7 +27,6 @@ class TFFedAvgAlgo(TFAlgo):
     The ``train`` method:
 
         - updates the weights of the model with the aggregated weights,
-        - initializes or loads the index generator,
         - calls the :py:func:`~substrafl.algorithms.tensorflow.TFFedAvgAlgo._local_train` method to do the local
           training
         - then gets the weight updates from the models and sends them to the aggregator.
@@ -47,11 +46,11 @@ class TFFedAvgAlgo(TFAlgo):
     def __init__(
         self,
         model: tf.keras.Sequential,
-        criterion: tf.keras.losses.Loss,
-        optimizer: tf.keras.optimizers.Optimizer,
+        criterion: tf.keras.losses.Loss, # set to None
+        optimizer: tf.keras.optimizers.Optimizer, # set to None
         index_generator: Union[
             BaseIndexGenerator, None
-        ],  # no index_generator is allowed
+        ],  # set to None
         dataset: tf.data.Dataset,
         scheduler: Optional[tf.keras.optimizers.schedules.LearningRateSchedule] = None,
         seed: Optional[int] = None,
@@ -66,7 +65,7 @@ class TFFedAvgAlgo(TFAlgo):
         before the `train()` or `predict()` function is ran.
 
         Args:
-            model (tf.keras.Sequential): A tensorflow model.
+            model (dict): the state_dict, or global configuration of a tensorflow model (config, compile_config, weights).
             criterion (tf.keras.losses.Loss): A tensorflow criterion (loss).
             optimizer (tf.keras.optimizers.Optimizer): A tensorflow optimizer linked to the model.
             index_generator (BaseIndexGenerator): a stateful index generator.
@@ -112,13 +111,12 @@ class TFFedAvgAlgo(TFAlgo):
         """Train method of the fed avg strategy implemented with tensorflow. This method will execute the following
         operations:
 
-            * instantiates the provided (or default) batch indexer
             * if a shared state is passed, set the parameters of the model to the provided shared state
             * train the model for n_updates
             * compute the weight update
 
         Args:
-            datasamples (typing.Any): Input data returned by the ``get_data`` method from the opener.
+            datasamples (typing.Any): Input data returned by the ``x`` and ``y`` methods from the opener.
             shared_state (FedAvgAveragedState, Optional): Dict containing tensorflow parameters that
                 will be set to the model. Defaults to None.
 
@@ -150,6 +148,7 @@ class TFFedAvgAlgo(TFAlgo):
 
             # A simpler version of following code is possible because increment_parameter
             # needs the object model, but its weights are enough
+
             # Deserializing and compiling
             model = self.model_deserialize()
 
@@ -174,11 +173,10 @@ class TFFedAvgAlgo(TFAlgo):
             parameters_to_subtract=old_parameters,
         )
 
+        print(f'Variation des poids selon le weight_manager : {parameters_update[2][0][0][0][:5]}')
+
         # Re set to the previous state
         self._model["weights"] = old_parameters
-
-        # parameters_updated = [tf.identity(p).numpy() for p in parameters_update] # Equivalent to tf.Tensor.read_value()
-
 
         return FedAvgSharedState(
             n_samples=len(train_dataset),

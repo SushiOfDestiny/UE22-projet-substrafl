@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+# Following data_loader is not used
 
 def tf_dataloader(dataset, batch_size=1, shuffle=False) -> tf.data.Dataset:
     # Create a tf.data.Dataset object from the dataset

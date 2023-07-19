@@ -6,7 +6,7 @@ import tensorflow as tf
 
 from collections import OrderedDict
 
-######## Hypothesis
+# Hypothesis
 # we ignore batch normalization
 # we ignore device handling
 
@@ -38,7 +38,7 @@ def model_load_state_dict(s_dict) -> tf.keras.Sequential:
 
 def increment_parameters(
     model: tf.keras.Model,
-    updates: np.array, # test with np.array and not np.array
+    updates: np.array,  # test with np.array and not np.array
     updates_multiplier: float = 1.0,
 ) -> None:
     """Add the given update to the model parameters. This function modifies the given model internally and therefore returns nothing.
@@ -62,7 +62,7 @@ def increment_parameters(
 
     for i in range(n_parameters):
         current_parameters[i] = current_parameters[i] + updates_multiplier * updates[i]
-    
+
     model.set_weights(current_parameters)
 
 
@@ -127,9 +127,8 @@ def weighted_sum_parameters(
 
     for parameters_to_sum in zip(*parameters_list):
         assert all(
-            # parameters_to_sum[0].numpy().shape == parameter.numpy().shape for parameter in parameters_to_sum
-            # parameters_to_sum[0].read_value().shape == parameter.read_value().shape for parameter in parameters_to_sum
-            parameters_to_sum[0].shape == parameter.shape for parameter in parameters_to_sum
+            parameters_to_sum[0].shape == parameter.shape
+            for parameter in parameters_to_sum
         ), "The shape of the parameters are unequal."
 
         weighted_sum.append(
@@ -140,9 +139,6 @@ def weighted_sum_parameters(
         )
 
     return weighted_sum
-
-
-# set_parameters() -> set_weights() ?? yes
 
 
 def zeros_like_parameters(
@@ -158,6 +154,6 @@ def zeros_like_parameters(
     """
     parameters = model.get_weights()
     for layer in parameters:
-        layer = 0.
+        layer = 0.0
 
     return parameters
