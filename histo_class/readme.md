@@ -52,3 +52,7 @@ Le projet open source Substra est hébergé par github (https://github.com/Subst
 ## Ressources mises à disposition des élèves
 
 Les élèves auront accès à toute la stack du produit open source Substra.
+
+## Avancement du travail effectué par le groupe
+
+Nos classes Tensorflow sont enregistrées avec succès dans le `compute_plan`. Cependant les poids du modèle CNN ne sont pas mis à jour lors des phases d'agrégation, bien que le gestionnaire de poids `weight_manager` fonctionne lors des tests. 
